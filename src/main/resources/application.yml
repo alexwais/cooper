@@ -1,0 +1,30 @@
+
+data-centers:
+  eu-1:
+    instances:
+      - label: test-1
+        cpuCores: 2
+        memory: 1024MB
+        cost: 0.5
+      - label: test-2
+        cpuCores: 2
+        memory: 2GB
+        cost: 0.5
+      - label: test-3
+        cpuCores: 2
+        memory: 512MB
+        cost: 0.5
+  eu-2:
+    instances:
+      - label: a-1
+        cpuCores: 2
+        memory: 1024
+        cost: 0.5
+      - label: a-2
+        cpuCores: 2
+        memory: 1024
+        cost: 0.5
+      - label: a-3
+        cpuCores: 2
+        memory: 1024
+        cost: 0.5
