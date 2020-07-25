@@ -1,7 +1,6 @@
 package at.alexwais.cooper;
 
-import at.alexwais.cooper.cloudsim.CloudSimRunner;
-import at.alexwais.cooper.csp.Provider;
+import at.alexwais.cooper.exec.CooperExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -26,12 +25,16 @@ public class CooperApplication implements CommandLineRunner {
 	public void run(String... args) {
 		log.info("EXECUTING : cooper");
 
-		var service = new SchedulerService(configMap);
-		service.printState();
+//		var service = new SchedulerService(configMap);
+//		service.printState();
+
+		var execution = new CooperExecution();
+		execution.run();
 
 
-		Provider cloudSimCsp = new CloudSimRunner();
-		cloudSimCsp.run();
+//		var cloudSimProvider = new CloudSimRunner();
+//		cloudSimProvider.registerListener(new SampleListener(cloudSimProvider));
+//		cloudSimProvider.run();
 
 //		SimPlus.run();
 	}

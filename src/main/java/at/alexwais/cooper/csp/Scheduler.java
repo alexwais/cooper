@@ -10,4 +10,6 @@ public interface Scheduler {
 
     void terminateContainer(long id);
 
+    void abort();
+
 }

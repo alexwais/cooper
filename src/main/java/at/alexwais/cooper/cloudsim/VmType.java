@@ -2,7 +2,6 @@ package at.alexwais.cooper.cloudsim;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 @AllArgsConstructor
 @Getter

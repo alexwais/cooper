@@ -1,7 +1,8 @@
 package at.alexwais.cooper.cloudsim;
 
-import at.alexwais.cooper.csp.Provider;
 import at.alexwais.cooper.csp.Listener;
+import at.alexwais.cooper.csp.Provider;
+import at.alexwais.cooper.csp.Scheduler;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
@@ -31,7 +32,7 @@ public class CloudSimRunner implements Provider {
      */
     private static final double CLOCK_INTERVAL = 1d;
     private static final double CYCLE_INTERVAL = 10;
-    private static final double TERMINATE = 200d; // 1min
+    private static final double TERMINATE_TIMEOUT = 43200; // 60*60*12 = 12h
 
 
     private VmTypeConfiguration vmTypeConfiguration;
@@ -46,6 +47,13 @@ public class CloudSimRunner implements Provider {
     private Map<Long, VmType> vmTypes = new HashMap<>();
 
     private List<Listener> listeners = new ArrayList<>();
+
+
+    private boolean terminationRequested = false;
+    private double prevTick = 0d;
+    private Map<Listener, Long> invokedClockTicks = new HashMap<>();
+    private Scheduler scheduler = new CloudSimScheduler();
+
 
     @Override
     public void run() {
@@ -63,8 +71,6 @@ public class CloudSimRunner implements Provider {
         datacenters.put("DC-1", createDatacenter(1024, 1024));
         datacenters.put("DC-2", createDatacenter(1024, 1024));
 
-        this.listeners.add(new InternalListener());
-
         simulation.startSync();
 
         while (simulation.isRunning()) {
@@ -74,16 +80,16 @@ public class CloudSimRunner implements Provider {
 
             tick();
 
-
-            if (simulation.clock() >= TERMINATE) {
+            var timeoutReached = simulation.clock() >= TERMINATE_TIMEOUT;
+            if (terminationRequested || timeoutReached) {
                 cloudletList.values().forEach(c -> c.getVm().getCloudletScheduler().cloudletCancel(c));
                 simulation.terminate();
-                log.info("TERMINATED DUE TO TIMEOUT");
+                log.info("TERMINATED DUE TO REASON: {}", terminationRequested ? "terminationRequested" : "timeoutReached");
             }
         }
 
-        if (simulation.clock() < TERMINATE) {
-            log.warn("TERMINATED BEFORE TIMEOUT");
+        if (!terminationRequested && simulation.clock() < TERMINATE_TIMEOUT) {
+            log.warn("UNWANTED TERMINATION BEFORE TIMEOUT");
         }
 
         new CloudletsTableBuilder(new ArrayList<>(cloudletList.values())).build();
@@ -105,10 +111,6 @@ public class CloudSimRunner implements Provider {
         });
     }
 
-    private double prevTick = 0d;
-    private Map<Listener, Long> invokedClockTicks = new HashMap<>();
-
-
     private Datacenter createDatacenter(long cores, long gbRam) {
         var hostPes = new ArrayList<Pe>();
         for (int i = 0; i < cores; i++) {
@@ -123,7 +125,6 @@ public class CloudSimRunner implements Provider {
         var host = new HostSimple(ram, bw, storage, hostPes);
         return new DatacenterSimple(simulation, List.of(host));
     }
-
 
     private void tick() {
         var currentClock = simulation.clock();
@@ -143,34 +144,9 @@ public class CloudSimRunner implements Provider {
 
             if (matchesCycleInterval && notInvokedBefore) {
                 invokedClockTicks.put(l, clockTick);
-                l.cycleElapsed(clockTick, new Scheduler());
+                l.cycleElapsed(clockTick, scheduler);
             }
         });
-    }
-
-    private class InternalListener implements Listener {
-        @Override
-        public void cycleElapsed(long clock, at.alexwais.cooper.csp.Scheduler scheduler) {
-            System.out.println(getClockInterval() + " seconds elapsed: " + simulation.clock());
-
-            if (clock == 30L) scheduler.launchVm("1.micro", "DC-1");
-            if (clock == 60L) scheduler.launchVm("4.xlarge", "DC-1");
-            if (clock == 60L) scheduler.launchContainer(2, 1024, 1);
-            if (clock == 80L) scheduler.launchContainer(2, 1024, 1);
-            if (clock == 100L) scheduler.launchContainer(2, 1600, 1);
-            if (clock == 100L) scheduler.launchContainer(2, 1600, 0);
-            if (clock == 110L) scheduler.terminateContainer(1);
-            if (clock == 130L) scheduler.terminateContainer(2);
-            if (clock == 150L) scheduler.terminateVm(0);
-
-            printVmList();
-//            new CloudletsTableBuilder(new ArrayList<>(cloudletList.values())).build();
-        }
-
-        @Override
-        public int getClockInterval() {
-            return 10;
-        }
     }
 
     private Vm launchVm(String type, String datacenter) {
@@ -190,8 +166,7 @@ public class CloudSimRunner implements Provider {
         return vm;
     }
 
-
-    private class Scheduler implements at.alexwais.cooper.csp.Scheduler {
+    private class CloudSimScheduler implements Scheduler {
         @Override
         public long launchVm(String type, String datacenter) {
             return CloudSimRunner.this.launchVm(type, datacenter).getId();
@@ -234,10 +209,15 @@ public class CloudSimRunner implements Provider {
             var cloudlet = cloudletList.get(id);
             cloudlet.getVm().getCloudletScheduler().cloudletCancel(cloudlet);
         }
+
+        @Override
+        public void abort() {
+            terminationRequested = true;
+        }
     }
 
 
-    private void printVmList() {
+    public void printVmList() {
         System.out.printf("\t\tVM utilization for Time %.0f:%n", simulation.clock());
         for (final Vm vm : broker.getVmExecList()) {
             System.out.printf(" Vm %4d |", vm.getId());
@@ -250,9 +230,13 @@ public class CloudSimRunner implements Provider {
         }
     }
 
+    public double getClock() {
+        return simulation.clock();
+    }
+
 
     @Override
-    public void registerSchedulingListener(Listener listener) {
+    public void registerListener(Listener listener) {
         this.listeners.add(listener);
     }
 

@@ -4,7 +4,6 @@ import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Instance;
 import at.alexwais.cooper.domain.InstanceType;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,15 +27,15 @@ public class SchedulerService {
             var totalInstanceCounter = 1000;
             for (InstanceTypeConfig i : e.getValue().getInstances()) {
                 var instanceType = new InstanceType(i.getLabel(), i.getCpuCores(), (int) i.getMemory().toMegabytes(), i.getCost());
-                dc.getInstanceTypes().add(instanceType);
+                dc.getVmTypes().add(instanceType);
 
                 var instances = new ArrayList<Instance>();
                 for (int j = 0; j < INSTANCE_COUNT; j++) {
                     var instanceId = dc.getName() + ":i" + totalInstanceCounter++;
                     instances.add(new Instance(instanceId, instanceType));
-                    dc.getInstances().putIfAbsent(instanceType.getLabel(), new ArrayList<>());
+//                    dc.getVms().putIfAbsent(instanceType.getLabel(), new ArrayList<>());
                 }
-                dc.getInstances().put(instanceType.getLabel(), instances);
+//                dc.getVms().put(instanceType.getLabel(), instances);
             }
 
             dataCenters.put(dc.getName(), dc);
@@ -55,8 +54,8 @@ public class SchedulerService {
 
     private ConsoleTable buildTable(DataCenter dataCenter) {
         var table = new ConsoleTable("Type", "Count");
-        dataCenter.getInstanceTypes().forEach(it -> {
-            table.addRow(it.getLabel(), dataCenter.getInstances().get(it.getLabel()).size());
+        dataCenter.getVmTypes().forEach(it -> {
+//            table.addRow(it.getLabel(), dataCenter.getVms().get(it.getLabel()).size());
         });
         return table;
     }
