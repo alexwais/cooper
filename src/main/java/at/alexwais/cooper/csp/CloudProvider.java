@@ -1,6 +1,6 @@
 package at.alexwais.cooper.csp;
 
-public interface Provider {
+public interface CloudProvider {
 
     void registerListener(Listener listener);
 

@@ -1,7 +1,7 @@
 package at.alexwais.cooper.cloudsim;
 
+import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
-import at.alexwais.cooper.csp.Provider;
 import at.alexwais.cooper.csp.Scheduler;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,7 @@ import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.builders.tables.CloudletsTableBuilder;
 
 @Slf4j
-public class CloudSimRunner implements Provider {
+public class CloudSimRunner implements CloudProvider {
 
     /**
      * Defines the time (in seconds) to run the simulation for.
@@ -208,6 +208,7 @@ public class CloudSimRunner implements Provider {
         public void terminateContainer(long id) {
             var cloudlet = cloudletList.get(id);
             cloudlet.getVm().getCloudletScheduler().cloudletCancel(cloudlet);
+            log.info("Terminated Cloudlet: {}", id);
         }
 
         @Override

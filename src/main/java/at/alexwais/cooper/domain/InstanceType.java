@@ -1,18 +1,18 @@
 package at.alexwais.cooper.domain;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class InstanceType {
 
-    private String label;
+    private final String label;
 
-    private Integer cpuCores;
+    private final Integer cpuCores;
 
-    private Integer memory; // MB
+    private final Integer memory; // MB
 
-    private Float cost; // USD
+    private final Float cost; // USD
 
 }

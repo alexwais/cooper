@@ -4,17 +4,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.Data;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@Data
+@Getter
 @RequiredArgsConstructor
 public class DataCenter {
 
     private final String name;
 
-    private List<InstanceType> vmTypes = new ArrayList<>();
+    private final List<InstanceType> vmTypes = new ArrayList<>();
 
-    private Map<String, Instance> vms = new HashMap<>();
+    private final List<Instance> vmInstances = new ArrayList<>();
+
+    private final Map<String, List<Instance>> vmsByType = new HashMap<>();
 
 }

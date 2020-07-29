@@ -9,5 +9,6 @@ import lombok.Data;
 public class OptimizationResult {
 
     private Map<String, Boolean> vmAllocation;
+    private Map<String, String> containerAllocation;
 
 }

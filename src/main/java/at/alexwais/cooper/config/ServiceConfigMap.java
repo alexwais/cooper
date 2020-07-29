@@ -1,12 +1,12 @@
-package at.alexwais.cooper;
+package at.alexwais.cooper.config;
 
 import java.util.HashMap;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "data-centers")
-public class DataCenterConfigMap extends HashMap<String, DataCenterConfig> {
+@ConfigurationProperties(prefix = "services")
+public class ServiceConfigMap extends HashMap<String, ServiceConfig> {
      
 
 }

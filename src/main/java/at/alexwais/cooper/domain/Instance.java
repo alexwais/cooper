@@ -1,13 +1,14 @@
 package at.alexwais.cooper.domain;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 @AllArgsConstructor
 public class Instance {
 
-    private String id;
-    private InstanceType type;
+    private final String id;
+
+    private final InstanceType type;
 
 }

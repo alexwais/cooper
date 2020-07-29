@@ -1,98 +1,151 @@
 package at.alexwais.cooper.exec;
 
+import at.alexwais.cooper.ConsoleTable;
 import at.alexwais.cooper.cloudsim.CloudSimRunner;
+import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
-import at.alexwais.cooper.csp.Provider;
 import at.alexwais.cooper.csp.Scheduler;
-import at.alexwais.cooper.domain.Instance;
-import at.alexwais.cooper.domain.InstanceType;
+import at.alexwais.cooper.domain.DataCenter;
+import at.alexwais.cooper.domain.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CooperExecution {
 
-	private Provider provider = new CloudSimRunner();
-	private Optimizer optimizer = new Optimizer();
+    private final FakeMonitor monitor = new FakeMonitor();
+    private final CloudProvider cloudProvider = new CloudSimRunner();
 
-	private Map<String, Instance> vms = new HashMap<>();
-	private Map<String, Long> providerVms = new HashMap<>();
+    private final Model model;
+    private final State state;
 
-	private InstanceType type = new InstanceType("2.medium", 2, 2048, 42f);
-
-
-	public void run() {
-		for (int i = 0; i < 1000; i++) {
-			var vm = new Instance("VM-" + i, type);
-			vms.put(vm.getId(), vm);
-		}
-
-		provider.registerListener(new SchedulingListener());
-		provider.run();
-	}
+    public CooperExecution(List<DataCenter> dataCenters, List<Service> services) {
+        this.model = new Model(dataCenters, services);
+        this.state = new State(model);
+    }
 
 
-	class SchedulingListener implements Listener {
-		@Override
-		public void cycleElapsed(long clock, Scheduler scheduler) {
-			log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
+    public void run() {
+        cloudProvider.registerListener(new SchedulingListener());
+        cloudProvider.run();
+    }
+
+    class SchedulingListener implements Listener {
+        @Override
+        public void cycleElapsed(long clock, Scheduler scheduler) {
+            log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
 
 //        if (clock == 100L) scheduler.launchVm("1.micro", "DC-1");
-			if (clock > 300L) scheduler.abort();
+            if (clock > 600L) scheduler.abort();
 
-			execute(scheduler, plan(optimize()));
-		}
+            // MAPE-K (Monitor - Analyze(Optimize) - Plan - Execute)
+            monitor();
+            var optimizationResult = optimize();
+            var executionPlan = plan(optimizationResult);
+            execute(scheduler, executionPlan);
 
-		@Override
-		public int getClockInterval() {
-			return 30;
-		}
-	}
+            printAllocationStatus();
+        }
 
-	private OptimizationResult optimize() {
-		var runningVms = vms.keySet().stream()
-				.collect(Collectors.toMap(Function.identity(), vmId -> providerVms.containsKey(vmId)));
-		var input = new OptimizationInput(runningVms);
+        @Override
+        public int getClockInterval() {
+            return 30;
+        }
+    }
 
-		return optimizer.optimize(input);
-	}
+    private void monitor() {
+        state.getServiceLoad().putAll(monitor.getCurrentServiceLoad());
+    }
 
-	private ExecutionItems plan(OptimizationResult opt) {
-		List<String> launchList = new ArrayList<>();
-		List<String> killList = new ArrayList<>();
+    private OptimizationResult optimize() {
+        var optimizer = new GreedyOptimizer(model, state);
+        return optimizer.optimize();
+    }
 
-		opt.getVmAllocation().forEach((vmId, shouldRun) -> {
-			var providerId = providerVms.get(vmId);
-			var isRunning = providerId != null;
+    private ExecutionItems plan(OptimizationResult opt) {
+        List<String> vmLaunchList = new ArrayList<>();
+        List<String> vmKillList = new ArrayList<>();
 
-			if (!isRunning && shouldRun) {
-				launchList.add(vmId);
-			} else if (isRunning && !shouldRun) {
-				killList.add(vmId);
-			}
-		});
+        opt.getVmAllocation().forEach((vmId, shouldRun) -> {
+            var isRunning = state.getLeasedProviderVms().containsKey(vmId);
 
-		return new ExecutionItems(launchList, killList);
-	}
+            if (!isRunning && shouldRun) {
+                vmLaunchList.add(vmId);
+            } else if (isRunning && !shouldRun) {
+                vmKillList.add(vmId);
+            }
+        });
 
-	private void execute(Scheduler scheduler, ExecutionItems items) {
-		items.getVmsToLaunch().forEach(vmId -> {
-			var vm = vms.get(vmId);
-			var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
-			providerVms.put(vmId, providerId);
-		});
+        Map<String, String> containerLaunchMap = new HashMap<>();
+        List<String> containerKillList = new ArrayList<>();
+        opt.getContainerAllocation().forEach((containerId, vmId) -> {
+            var runningOnVm = state.getContainerVmAllocation().get(containerId);
+            var isRunning = runningOnVm != null;
+            var runsOnRequiredVm = isRunning && vmId.equals(runningOnVm);
+            if (!isRunning || !runsOnRequiredVm) {
+                containerLaunchMap.put(containerId, vmId);
+            }
+        });
 
-		items.getVmsToTerminate().forEach(vmId -> {
-			var vm = vms.get(vmId);
-			var providerId = providerVms.get(vmId);
-			scheduler.terminateVm(providerId);
-			providerVms.remove(vmId);
-		});
-	}
+        state.getContainerVmAllocation().forEach((containerId, vmId) -> {
+            var allocatedVm = opt.getContainerAllocation().get(containerId);
+            var shouldRun = allocatedVm != null;
+            var runsOnRequiredVm = shouldRun && vmId.equals(allocatedVm);
+            if (!shouldRun || !runsOnRequiredVm) {
+                containerKillList.add(containerId);
+            }
+        });
+
+        return new ExecutionItems(vmLaunchList, vmKillList, containerLaunchMap, containerKillList);
+    }
+
+    private void execute(Scheduler scheduler, ExecutionItems items) {
+        items.getVmsToLaunch().forEach(vmId -> {
+            var vm = model.getVms().get(vmId);
+            var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
+			state.getLeasedProviderVms().put(vmId, providerId);
+        });
+        items.getVmsToTerminate().forEach(vmId -> {
+            var vm = model.getVms().get(vmId);
+            var providerId = state.getLeasedProviderVms().get(vmId);
+            scheduler.terminateVm(providerId);
+			state.getLeasedProviderVms().remove(vmId);
+        });
+
+        items.getContainersToStart().forEach((containerId, vmId) -> {
+            var container = model.getContainers().get(containerId);
+            var providerVmId = state.getLeasedProviderVms().get(vmId);
+            var providerId = scheduler.launchContainer(1, container.getConfiguration().getMemory().toMegabytes(), providerVmId);
+
+            state.getRunningProviderContainers().put(containerId, providerId);
+            state.allocateContainer(containerId, vmId);
+        });
+        items.getContainersToStop().forEach(containerId -> {
+            var container = model.getContainers().get(containerId);
+            var providerContainerId = state.getRunningProviderContainers().get(containerId);
+            scheduler.terminateContainer(providerContainerId);
+
+            state.getRunningProviderContainers().remove(containerId);
+            state.deallocateContainer(containerId);
+        });
+    }
+
+
+    private void printAllocationStatus() {
+        System.out.println();
+        System.out.println("VM Allocation:");
+        System.out.println();
+        var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "# Containers");
+        state.getLeasedVms().forEach(vm -> {
+            var containerList = state.getVmContainerAllocation().get(vm.getId());
+            var numberOfAllocatedContainers = containerList != null ? containerList.size() : 0;
+            var capacity = state.getFreeCapacity(vm.getId());
+            table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), numberOfAllocatedContainers);
+        });
+        table.print();
+    }
 
 }
