@@ -1,11 +1,13 @@
 package at.alexwais.cooper.domain;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.springframework.util.unit.DataSize;
 
 @Getter
 @AllArgsConstructor
+@EqualsAndHashCode
 public class ContainerConfiguration {
 
     private String label;

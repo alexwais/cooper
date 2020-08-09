@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class InstanceType {
+public class VmType {
 
     private final String label;
 

@@ -29,18 +29,16 @@ public class Initializer {
 
             var totalInstanceCounter = 1000;
             for (var t : config.getInstanceTypes()) {
-                var instanceType = new InstanceType(t.getLabel(), t.getCpuCores(), (int) t.getMemory().toMegabytes(), t.getCost());
-                dc.getVmTypes().add(instanceType);
+                var vmType = new VmType(t.getLabel(), t.getCpuCores(), (int) t.getMemory().toMegabytes(), t.getCost());
+                dc.getVmTypes().add(vmType);
 
-                var instances = new ArrayList<Instance>();
+                var instances = new ArrayList<VmInstance>();
                 for (int j = 0; j < INSTANCE_COUNT; j++) {
                     var instanceId = dc.getName() + ":i" + totalInstanceCounter++;
-                    instances.add(new Instance(instanceId, instanceType));
-
-//                    dc.getVmsByType().putIfAbsent(instanceType.getLabel(), new ArrayList<>());
+                    instances.add(new VmInstance(instanceId, vmType));
                 }
                 dc.getVmInstances().addAll(instances);
-                dc.getVmsByType().put(instanceType.getLabel(), instances);
+                dc.getVmsByType().put(vmType.getLabel(), instances);
             }
 
             dataCenters.add(dc);
@@ -51,19 +49,18 @@ public class Initializer {
         configMap.forEach((key, config) -> {
             var service = new Service(key);
 
-            var totalInstanceCounter = 1000;
+//            var totalInstanceCounter = 1000;
             for (var c : config.getContainerConfigurations()) {
                 var containerConfiguration = new ContainerConfiguration(c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
                 service.getContainerConfigurations().add(containerConfiguration);
 
-                var containers = new ArrayList<ContainerInstance>();
-                for (int j = 0; j < INSTANCE_COUNT; j++) {
-                    var containerId = service.getName() + ":c" + totalInstanceCounter++;
-                    containers.add(new ContainerInstance(containerId, containerConfiguration, service));
-//                    service.getContainersByConfiguration().putIfAbsent(containerConfiguration.getLabel(), new ArrayList<>());
-                }
-                service.getContainers().addAll(containers);
-                service.getContainersByConfiguration().putIfAbsent(containerConfiguration.getLabel(), containers);
+//                var containers = new ArrayList<ContainerInstance>();
+//                for (int j = 0; j < INSTANCE_COUNT; j++) {
+//                    var containerId = service.getName() + ":c" + totalInstanceCounter++;
+//                    containers.add(new ContainerInstance(containerId, containerConfiguration, service));
+//                }
+//                service.getContainers().addAll(containers);
+//                service.getContainersByConfiguration().putIfAbsent(containerConfiguration.getLabel(), containers);
             }
 
             services.add(service);
@@ -97,12 +94,11 @@ public class Initializer {
     }
 
     private ConsoleTable buildTable(Service service) {
-        var table = new ConsoleTable("Type", "Count");
+        var table = new ConsoleTable("Type");
         service.getContainerConfigurations().forEach(it -> {
-            table.addRow(it.getLabel(), service.getContainersByConfiguration().get(it.getLabel()).size());
+            table.addRow(it.getLabel());
         });
         return table;
     }
-
 
 }

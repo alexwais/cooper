@@ -1,9 +1,10 @@
 package at.alexwais.cooper.exec;
 
+import at.alexwais.cooper.domain.ContainerConfiguration;
 import java.util.List;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @AllArgsConstructor
@@ -12,7 +13,7 @@ public class ExecutionItems {
     private List<String> vmsToLaunch;
     private List<String> vmsToTerminate;
 
-    private Map<String, String> containersToStart; // containerId, vmId
-    private List<String> containersToStop;
+    private List<Pair<String, ContainerConfiguration>> containersToStart;
+    private List<Pair<String, ContainerConfiguration>> containersToStop;
 
 }

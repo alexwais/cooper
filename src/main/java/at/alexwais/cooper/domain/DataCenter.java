@@ -13,10 +13,10 @@ public class DataCenter {
 
     private final String name;
 
-    private final List<InstanceType> vmTypes = new ArrayList<>();
+    private final List<VmType> vmTypes = new ArrayList<>();
 
-    private final List<Instance> vmInstances = new ArrayList<>();
+    private final List<VmInstance> vmInstances = new ArrayList<>();
 
-    private final Map<String, List<Instance>> vmsByType = new HashMap<>();
+    private final Map<String, List<VmInstance>> vmsByType = new HashMap<>();
 
 }

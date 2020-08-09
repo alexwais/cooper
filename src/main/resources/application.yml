@@ -11,8 +11,8 @@ dataCenters:
         memory: 2GB
         cost: 0.5
       - label: 2.medium
-        cpuCores: 2
-        memory: 2GB
+        cpuCores: 4
+        memory: 4GB
         cost: 0.5
   DC-2:
     instanceTypes:
@@ -29,7 +29,7 @@ dataCenters:
         memory: 1024
         cost: 0.5
 services:
-  sample-service:
+  service-a:
     containerConfigurations:
       - label: 1500@500
         rpmCapacity: 1500
@@ -39,3 +39,25 @@ services:
         rpmCapacity: 3000
         cpuShares: 2048
         memory: 1500MB
+      - label: 6000@3000
+        rpmCapacity: 6000
+        cpuShares: 2048
+        memory: 3000MB
+  service-b:
+    containerConfigurations:
+      - label: 1500@500
+        rpmCapacity: 1500
+        cpuShares: 1024
+        memory: 500MB
+      - label: 2000@600
+        rpmCapacity: 2000
+        cpuShares: 1024
+        memory: 600MB
+      - label: 4000@1800
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 1800MB
+      - label: 8000@3600
+        rpmCapacity: 8000
+        cpuShares: 2048
+        memory: 3600MB

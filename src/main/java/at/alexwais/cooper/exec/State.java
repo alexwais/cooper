@@ -1,7 +1,11 @@
 package at.alexwais.cooper.exec;
 
+import static at.alexwais.cooper.exec.MapUtils.putToMapList;
+import static at.alexwais.cooper.exec.MapUtils.removeContainerFromMapList;
+
+import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.ContainerInstance;
-import at.alexwais.cooper.domain.Instance;
+import at.alexwais.cooper.domain.VmInstance;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -16,22 +20,40 @@ public class State {
 
     private Map<String, Long> serviceLoad = new HashMap<>();
 
-    private final Map<String, List<ContainerInstance>> vmContainerAllocation = new HashMap<>();
-    private final Map<String, String> containerVmAllocation = new HashMap<>();
+//    private final Map<String, String> containerVmAllocation = new HashMap<>();
+
+    private final Map<String, List<ContainerInstance>> runningContainersByVm = new HashMap<>();
+    private final Map<String, List<ContainerInstance>> runningContainersByType = new HashMap<>();
+    private final Map<String, List<ContainerInstance>> runningContainersByService = new HashMap<>();
 
     private final Map<String, Long> leasedProviderVms = new HashMap<>();
-    private final Map<String, Long> runningProviderContainers = new HashMap<>();
+    private final Map<ContainerInstance, Long> runningProviderContainers = new HashMap<>();
 
-    public List<Instance> getLeasedVms() {
+    public List<VmInstance> getLeasedVms() {
         return this.leasedProviderVms.keySet().stream()
                 .map(k -> model.getVms().get(k))
                 .collect(Collectors.toList());
     }
 
-    public List<ContainerInstance> getRunningContainers() {
-        return this.runningProviderContainers.keySet().stream()
-                .map(k -> model.getContainers().get(k))
-                .collect(Collectors.toList());
+    public List<ContainerInstance> getRunningContainersByService(String service) {
+        return this.runningContainersByService.getOrDefault(service, Collections.emptyList());
+    }
+
+    public List<ContainerInstance> getRunningContainersByVm(String vmId) {
+        return this.runningContainersByVm.getOrDefault(vmId, Collections.emptyList());
+    }
+
+    public Map<String, Long> getServiceCapacity() {
+        Map<String, Long> containerCapacityPerService = new HashMap<>();
+
+        model.getServices().values().forEach(s -> {
+            var rpmCapacitySum = getRunningContainersByService(s.getName()).stream()
+                    .map(c -> c.getConfiguration().getRpmCapacity())
+                    .reduce(0L, Long::sum);
+            containerCapacityPerService.put(s.getName(), rpmCapacitySum);
+        });
+
+        return containerCapacityPerService;
     }
 
     public Pair<Integer, Long> getFreeCapacity(String vmId) {
@@ -40,7 +62,7 @@ public class State {
         }
 
         var vm = model.getVms().get(vmId);
-        var allocatedContainers = vmContainerAllocation.get(vm.getId());
+        var allocatedContainers = runningContainersByVm.get(vm.getId());
 
         var allocatedCpuCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
                 .map(c -> c.getConfiguration().getCpuShares())
@@ -55,31 +77,33 @@ public class State {
         return Pair.of(freeCpuCapacity, freeMemoryCapacity);
     }
 
-    public void allocateContainer(String containerId, String vmId) {
-        containerVmAllocation.put(containerId, vmId);
+    public void allocateContainerInstance(String vmId, ContainerConfiguration type, long providerId) {
+        var vm = model.getVms().get(vmId);
+        var isDuplicate = getRunningContainersByVm(vm.getId()).stream()
+                .anyMatch(c -> c.getConfiguration().equals(type));
 
-        var container = model.getContainers().get(containerId);
+        if (isDuplicate) throw new IllegalStateException("Container of type " + type.getLabel() + " already allocated on VM " + vmId);
 
-        var vmContainerList = vmContainerAllocation.get(vmId);
-        if (vmContainerList != null) {
-            vmContainerList.add(container);
-        } else {
-            vmContainerAllocation.put(vmId, new ArrayList<>(Collections.singletonList(container)));
-        }
+        var container = new ContainerInstance(type, type.getService(), vm);
+
+        putToMapList(runningContainersByVm, container.getVm().getId(), container);
+        putToMapList(runningContainersByType, container.getConfiguration().getLabel(), container);
+        putToMapList(runningContainersByService, container.getService().getName(), container);
+
+        runningProviderContainers.put(container, providerId);
     }
 
-    public void deallocateContainer(String containerId) {
-        var vmId = containerVmAllocation.get(containerId);
-        containerVmAllocation.remove(containerId);
+    public void deallocateContainerInstance(ContainerInstance container) {
+        removeContainerFromMapList(runningContainersByVm, container.getVm().getId(), container);
+        removeContainerFromMapList(runningContainersByType, container.getConfiguration().getLabel(), container);
+        removeContainerFromMapList(runningContainersByService, container.getService().getName(), container);
+        runningProviderContainers.remove(container);
+    }
 
-        var container = model.getContainers().get(containerId);
-
-        var vmContainerList = vmContainerAllocation.get(vmId);
-        vmContainerList.remove(container);
-
-        if (vmContainerList.isEmpty()) {
-            vmContainerAllocation.remove(vmId);
-        }
+    public void releaseVm(String vmId) {
+        var runningContainers = new ArrayList<>(getRunningContainersByVm(vmId));
+        runningContainers.forEach(this::deallocateContainerInstance);
+        leasedProviderVms.remove(vmId);
     }
 
 }

@@ -5,13 +5,14 @@ import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
+import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 
 @Slf4j
 public class CooperExecution {
@@ -47,6 +48,7 @@ public class CooperExecution {
             var executionPlan = plan(optimizationResult);
             execute(scheduler, executionPlan);
 
+            printServiceLoad();
             printAllocationStatus();
         }
 
@@ -79,71 +81,86 @@ public class CooperExecution {
             }
         });
 
-        Map<String, String> containerLaunchMap = new HashMap<>();
-        List<String> containerKillList = new ArrayList<>();
-        opt.getContainerAllocation().forEach((containerId, vmId) -> {
-            var runningOnVm = state.getContainerVmAllocation().get(containerId);
-            var isRunning = runningOnVm != null;
-            var runsOnRequiredVm = isRunning && vmId.equals(runningOnVm);
-            if (!isRunning || !runsOnRequiredVm) {
-                containerLaunchMap.put(containerId, vmId);
-            }
-        });
+        List<Pair<String, ContainerConfiguration>> containerLaunchList = new ArrayList<>();
+        List<Pair<String, ContainerConfiguration>> containerKillList = new ArrayList<>();
 
-        state.getContainerVmAllocation().forEach((containerId, vmId) -> {
-            var allocatedVm = opt.getContainerAllocation().get(containerId);
-            var shouldRun = allocatedVm != null;
-            var runsOnRequiredVm = shouldRun && vmId.equals(allocatedVm);
-            if (!shouldRun || !runsOnRequiredVm) {
-                containerKillList.add(containerId);
-            }
-        });
+        opt.getContainerAllocation().stream()
+                .forEach(a -> {
+                    var allocate = a.isAllocate();
+                    var containersRunningOnVm = state.getRunningContainersByVm(a.getVm().getId());
+                    var isContainerTypeRunningOnVm = containersRunningOnVm.stream().anyMatch(c -> c.getConfiguration().equals(a.getType()));
+                    if (allocate && !isContainerTypeRunningOnVm) {
+                        containerLaunchList.add(Pair.of(a.getVm().getId(), a.getType()));
+                    } else if (!allocate && isContainerTypeRunningOnVm) {
+                        containerKillList.add(Pair.of(a.getVm().getId(), a.getType()));
+                    } else {
+                        // nothing to do
+                    }
+                });
 
-        return new ExecutionItems(vmLaunchList, vmKillList, containerLaunchMap, containerKillList);
+        return new ExecutionItems(vmLaunchList, vmKillList, containerLaunchList, containerKillList);
     }
 
     private void execute(Scheduler scheduler, ExecutionItems items) {
         items.getVmsToLaunch().forEach(vmId -> {
             var vm = model.getVms().get(vmId);
             var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
-			state.getLeasedProviderVms().put(vmId, providerId);
+            state.getLeasedProviderVms().put(vmId, providerId);
         });
+        items.getContainersToStart().forEach(a -> {
+            var vmId = a.getKey();
+            var containerType = a.getValue();
+            var providerVmId = state.getLeasedProviderVms().get(vmId);
+            if (providerVmId == null) {
+                log.info("null");
+            }
+
+            var providerId = scheduler.launchContainer(1, containerType.getMemory().toMegabytes(), providerVmId);
+            state.allocateContainerInstance(vmId, containerType, providerId);
+        });
+        items.getContainersToStop().forEach(a -> {
+            var vmId = a.getKey();
+            var containerType = a.getValue();
+            var runningContainers = state.getRunningContainersByVm(vmId);
+            var container = runningContainers.stream()
+                    .filter(c -> c.getConfiguration().equals(containerType))
+                    .findAny()
+                    .orElseThrow();
+
+            var providerContainerId = state.getRunningProviderContainers().get(container);
+            scheduler.terminateContainer(providerContainerId);
+            state.deallocateContainerInstance(container);
+        });
+        // TODO delay termination of vms/containers?
         items.getVmsToTerminate().forEach(vmId -> {
             var vm = model.getVms().get(vmId);
             var providerId = state.getLeasedProviderVms().get(vmId);
             scheduler.terminateVm(providerId);
-			state.getLeasedProviderVms().remove(vmId);
+            state.releaseVm(vm.getId());
         });
 
-        items.getContainersToStart().forEach((containerId, vmId) -> {
-            var container = model.getContainers().get(containerId);
-            var providerVmId = state.getLeasedProviderVms().get(vmId);
-            var providerId = scheduler.launchContainer(1, container.getConfiguration().getMemory().toMegabytes(), providerVmId);
-
-            state.getRunningProviderContainers().put(containerId, providerId);
-            state.allocateContainer(containerId, vmId);
-        });
-        items.getContainersToStop().forEach(containerId -> {
-            var container = model.getContainers().get(containerId);
-            var providerContainerId = state.getRunningProviderContainers().get(containerId);
-            scheduler.terminateContainer(providerContainerId);
-
-            state.getRunningProviderContainers().remove(containerId);
-            state.deallocateContainer(containerId);
-        });
     }
 
+    private void printServiceLoad() {
+        System.out.println();
+        System.out.println("Service Load:");
+        System.out.println();
+        var serviceCapacity = state.getServiceCapacity();
+        var table = new ConsoleTable("Service", "Load", "Capacity");
+        state.getServiceLoad().forEach((key, value) -> table.addRow(key, value, serviceCapacity.get(key)));
+        table.print();
+    }
 
     private void printAllocationStatus() {
         System.out.println();
         System.out.println("VM Allocation:");
         System.out.println();
-        var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "# Containers");
+        var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "Containers");
         state.getLeasedVms().forEach(vm -> {
-            var containerList = state.getVmContainerAllocation().get(vm.getId());
-            var numberOfAllocatedContainers = containerList != null ? containerList.size() : 0;
+            var containerList = state.getRunningContainersByVm().get(vm.getId());
+            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
             var capacity = state.getFreeCapacity(vm.getId());
-            table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), numberOfAllocatedContainers);
+            table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), allocatedContainerTypes);
         });
         table.print();
     }
