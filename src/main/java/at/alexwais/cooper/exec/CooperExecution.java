@@ -8,6 +8,7 @@ import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,9 +63,20 @@ public class CooperExecution {
         state.getServiceLoad().putAll(monitor.getCurrentServiceLoad());
     }
 
+
+    private List<OptimizationResult> historicOptResults = new ArrayList<>();
+
     private OptimizationResult optimize() {
-        var optimizer = new GreedyOptimizer(model, state);
-        return optimizer.optimize();
+//        return new GreedyOptimizer(model, state).optimize();
+
+
+        var greedyResult = new GreedyOptimizer(model, state).optimize();
+        historicOptResults.add(greedyResult);
+
+        var optimizer = new GeneticAlgorithm(historicOptResults, model, state);
+        var result = optimizer.run();
+        historicOptResults.add(result);
+        return result;
     }
 
     private ExecutionItems plan(OptimizationResult opt) {

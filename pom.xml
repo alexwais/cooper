@@ -65,6 +65,12 @@
 			<artifactId>cloudsim-plus</artifactId>
 			<version>5.4.1</version>
 		</dependency>
+
+		<dependency>
+			<groupId>io.jenetics</groupId>
+			<artifactId>jenetics</artifactId>
+			<version>6.0.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>
