@@ -8,6 +8,7 @@ import at.alexwais.cooper.exec.State;
 import io.jenetics.BitChromosome;
 import io.jenetics.BitGene;
 import io.jenetics.Genotype;
+import io.jenetics.Phenotype;
 import io.jenetics.util.ISeq;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,7 +62,9 @@ public class Mapping {
         return result;
     }
 
-    public OptimizationResult genotypeToOptimizationResult(Map<VmInstance, List<ContainerType>> genotype) {
+    public OptimizationResult phenotypeToOptimizationResult(Phenotype<BitGene, Float> phenotype) {
+        var genotype = containerRowSquareDecoder(phenotype.genotype());
+
         var vmAllocation = new HashMap<String, Boolean>();
 
         // Map vmContainerAllocation to result data structure
@@ -76,7 +79,7 @@ public class Mapping {
             });
         });
 
-        return new OptimizationResult(vmAllocation, allocationTuples);
+        return new OptimizationResult(vmAllocation, allocationTuples, phenotype.fitness());
     }
 
 

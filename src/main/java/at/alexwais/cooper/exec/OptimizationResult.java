@@ -14,7 +14,9 @@ public class OptimizationResult {
     private Map<String, Boolean> vmAllocation;
 //    private Map<String, List<String>> containerAllocation; // VM IDs to a List of Container Types
 
-    public List<AllocationTuple> containerAllocation;
+    private List<AllocationTuple> containerAllocation;
+
+    private Float fitness;
 
     @Getter
     @RequiredArgsConstructor

@@ -17,8 +17,10 @@ public class FakeMonitor {
         loadRpmFixture.add(List.of(25000L, 8000L));
         loadRpmFixture.add(List.of(25000L, 12000L));
         loadRpmFixture.add(List.of(25000L, 12000L));
-        loadRpmFixture.add(List.of(25000L, 8000L));
-        loadRpmFixture.add(List.of(25000L, 8000L));
+        loadRpmFixture.add(List.of(25000L, 60000L));
+        loadRpmFixture.add(List.of(25000L, 60000L));
+        loadRpmFixture.add(List.of(1000L, 8000L));
+        loadRpmFixture.add(List.of(1000L, 8000L));
 
 //        loadRpmFixture.add(List.of(500L, 3000L));
 //        loadRpmFixture.add(List.of(1000L, 3000L));

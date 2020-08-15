@@ -25,6 +25,8 @@ public class CooperExecution {
     private final Model model;
     private final State state;
 
+    private final long MAX_RUNTIME = 300L;
+
     public CooperExecution(List<DataCenter> dataCenters, List<Service> services) {
         this.model = new Model(dataCenters, services);
         this.state = new State(model);
@@ -36,13 +38,18 @@ public class CooperExecution {
         cloudProvider.run();
     }
 
+    private void tearDown() {
+        log.info(" *** Total Fitness: {}", totalFitness);
+    }
+
     class SchedulingListener implements Listener {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
             log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
 
-//        if (clock == 100L) scheduler.launchVm("1.micro", "DC-1");
-            if (clock > 100L) scheduler.abort();
+            if (clock >= MAX_RUNTIME) {
+                scheduler.abort();
+            }
 
             // MAPE-K (Monitor - Analyze(Optimize) - Plan - Execute)
             monitor();
@@ -52,6 +59,10 @@ public class CooperExecution {
 
             printServiceLoad();
             printAllocationStatus();
+
+            if (clock >= MAX_RUNTIME) {
+                tearDown();
+            }
         }
 
         @Override
@@ -65,22 +76,22 @@ public class CooperExecution {
     }
 
 
-    private List<OptimizationResult> historicOptResults = new ArrayList<>();
+    private float totalFitness = 0;
 
     private OptimizationResult optimize() {
         var greedyResult = new GreedyOptimizer(model, state).optimize();
 //        return greedyResult;
 
-        if (historicOptResults.isEmpty()) {
-            historicOptResults.add(greedyResult);
-        }
+//        if (historicOptResults.isEmpty()) {
+//            historicOptResults.add(greedyResult);
+//        }
 
         var optimizer = new GeneticAlgorithm(Collections.emptyList(), model, state);
         var result = optimizer.run();
-        historicOptResults.clear();
-        historicOptResults.add(result);
+//        historicOptResults.clear();
+//        historicOptResults.add(result);
 
-
+        totalFitness += result.getFitness();
         if (greedyResult.equals(result)) {
             log.warn("      *** GA == GREEDY *** ");
         } else {

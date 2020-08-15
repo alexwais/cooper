@@ -104,7 +104,7 @@ public class GreedyOptimizer {
             });
         });
 
-        return new OptimizationResult(resultAllocatedVms, result);
+        return new OptimizationResult(resultAllocatedVms, result, 0f);
     }
 
 

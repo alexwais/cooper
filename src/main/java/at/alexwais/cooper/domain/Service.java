@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
-@EqualsAndHashCode(exclude = "containerConfigurations")
+@EqualsAndHashCode(exclude = "containerTypes")
 public class Service {
 
     private final String name;

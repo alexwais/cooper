@@ -11,10 +11,8 @@ import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStart;
 import io.jenetics.util.ISeq;
-import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -60,26 +58,6 @@ public class GeneticAlgorithm {
         Engine<BitGene, Float> engine1 = Engine
                 .builder(fitnessFunction::eval, containerRowCodec)
                 .minimizing()
-                .populationSize(400)
-                .offspringFraction(0.4)
-                .survivorsSelector(
-                        new EliteSelector<>(1,
-                                new RouletteWheelSelector<BitGene, Float>()
-                        )
-                )
-                .offspringSelector(
-                        new TournamentSelector<>(3)
-                )
-                .alterers(
-                        new MultiPointCrossover<>(0.2, 1),
-                        new Mutator<>(0.03)
-                )
-                .maximalPhenotypeAge(100)
-                .build();
-
-        Engine<BitGene, Float> engine2 = Engine
-                .builder(fitnessFunction::eval, vmRowCodec)
-                .minimizing()
                 .populationSize(500)
                 .offspringFraction(0.5)
                 .survivorsSelector(
@@ -91,31 +69,50 @@ public class GeneticAlgorithm {
                         new TournamentSelector<>(3)
                 )
                 .alterers(
-                        new SinglePointCrossover(0.9),
-                        new Mutator<>(0.02)
+                        new UniformCrossover<>(0.2, 0.15),
+                        new Mutator<>(0.01),
+                        new SwapMutator<>(0.05)
+                )
+                .maximalPhenotypeAge(100)
+                .build();
+
+        Engine<BitGene, Float> engine2 = Engine
+                .builder(fitnessFunction::eval, vmRowCodec)
+                .minimizing()
+                .populationSize(500)
+                .offspringFraction(0.4)
+                .survivorsSelector(
+                        new EliteSelector<>(1,
+                                new RouletteWheelSelector<BitGene, Float>()
+                        )
+                )
+                .offspringSelector(
+                        new TournamentSelector<>(3)
+                )
+                .alterers(
+                        new UniformCrossover(0.5, 0.2),
+                        new SwapMutator<>(0.05)
                 )
                 .maximalPhenotypeAge(100)
                 .build();
 
 
-        var stream1Result = new ArrayDeque<>(engine1.stream()
-                .limit(200)
-                .map(this::mapEvolutionStart)
-                .collect(Collectors.toList()));
-
-        var phenotype = engine2.stream(stream1Result::pop)
-                .limit(200)
-                .collect(EvolutionResult.toBestPhenotype());
-        var decodedGenotype = vmRowCodec.decode(phenotype.genotype());
-
-        //        var phenotype = engine1.stream()
-//                .limit(500)
+//        var stream1Result = new ArrayDeque<>(engine1.stream()
+//                .limit(200)
+//                .map(this::mapEvolutionStart)
+//                .collect(Collectors.toList()));
+//
+//        var phenotype = engine2.stream(stream1Result::pop)
+//                .limit(200)
 //                .collect(EvolutionResult.toBestPhenotype());
-//        var decodedGenotype = containerRowCodec.decode(phenotype.genotype());
+//        var decodedGenotype = vmRowCodec.decode(phenotype.genotype());
 
+        var phenotype = engine1.stream()
+                .limit(500)
+                .collect(EvolutionResult.toBestPhenotype());
 
-        //        log.info("Result fitness: {}", phenotype.fitness());
-        return mapping.genotypeToOptimizationResult(decodedGenotype);
+        log.info("Result fitness: {}", phenotype.fitness());
+        return mapping.phenotypeToOptimizationResult(phenotype);
     }
 
     private EvolutionStart<BitGene, Float> mapEvolutionStart(EvolutionResult<BitGene, Float> evo) {
