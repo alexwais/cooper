@@ -10,7 +10,7 @@ import lombok.Getter;
 
 public class Initializer {
 
-    private static final int INSTANCE_COUNT = 1_000;
+    private static final int INSTANCE_COUNT = 50;
 
     @Getter
     private List<DataCenter> dataCenters = new ArrayList<>();

@@ -17,10 +17,9 @@ public class FitnessFunction {
     private final State state;
     private final Mapping mapping;
 
-    public float eval(Boolean[][] decodedGenotype) {
+    public float eval(Map<VmInstance, List<ContainerConfiguration>> allocation) {
         var violations = 0f;
 
-        var allocation = mapping.genotypeToAllocation(decodedGenotype);
         var allocatedContainers = allocation.values().stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
@@ -31,15 +30,19 @@ public class FitnessFunction {
         });
 
         var wastedMemory = 0;
+        var containersOnSameVm = 0;
         for (Map.Entry<VmInstance, List<ContainerConfiguration>> e : allocation.entrySet()) {
             var vm = e.getKey();
-            var types = e.getValue();
+            var allocatedTypes = e.getValue();
             var availableMemory = vm.getType().getMemory();
-            var requiredMemory = types.stream().map(t -> t.getMemory().toMegabytes()).reduce(0L, Long::sum);
+            var requiredMemory = allocatedTypes.stream().map(t -> t.getMemory().toMegabytes()).reduce(0L, Long::sum);
             if (availableMemory < requiredMemory) {
                 violations++;
             }
             wastedMemory += Math.abs(availableMemory - requiredMemory);
+            if (allocatedTypes.size() > 1) {
+                containersOnSameVm += allocatedTypes.size();
+            }
         }
 
         var capacityPerService = new HashMap<String, Long>();
@@ -60,14 +63,14 @@ public class FitnessFunction {
             Long load = entry.getValue();
             var capacity = capacityPerService.get(serviceName);
             if (capacity < load) {
-                violations++;
+                violations += load - capacity;
             }
         }
 
         var allocatedVmCount = allocation.size();
         var allocatedContainerCount = allocatedContainers.size();
 
-        var fitness = allocatedVmCount + overCapacity + wastedMemory * 100 + violations * 10_000_000_000f;
+        var fitness = allocatedVmCount * 100 - containersOnSameVm * 1000 + overCapacity + wastedMemory * 100 + violations * 10_000_000_000f;
         return fitness;
     }
 

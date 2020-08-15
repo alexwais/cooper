@@ -60,7 +60,7 @@ public class GreedyOptimizer {
             if (reusedVm != null) {
                 MapUtils.putToMapList(vmContainerAllocation, reusedVm.getId(), c);
             } else {
-                var newVm = getFreeInstance();
+                var newVm = getFreeInstanceForContainer(c);
                 vmsToProvision.add(newVm);
                 MapUtils.putToMapList(vmContainerAllocation, newVm.getId(), c);
             }
@@ -108,33 +108,20 @@ public class GreedyOptimizer {
     }
 
 
-    private VmInstance getFreeInstance() {
+    private VmInstance getFreeInstanceForContainer(ContainerConfiguration type) {
         return model.getVms().values().stream()
                 .filter(vm -> !state.getLeasedVms().contains(vm))
                 .filter(vm -> !vmsToProvision.contains(vm))
+                .filter(vm -> Validator.isContainerPlacableOnVm(type, vm, Collections.emptyList()))
                 .findFirst().orElseThrow(() -> new IllegalStateException("No free vm instances left"));
     }
 
     private VmInstance tryToProvisionOnLeasedVm(ContainerConfiguration type) {
         for (var vmId : vmContainerAllocation.keySet()) {
             var vm = model.getVms().get(vmId);
-            var vmCpuCapacity = vm.getType().getCpuCores() * 1024;
-            var vmMemoryCapacity = vm.getType().getMemory();
-
             var allocatedContainers = vmContainerAllocation.get(vm.getId());
 
-            var allocatedCpuCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
-                    .map(ContainerConfiguration::getCpuShares)
-                    .reduce(0, Integer::sum);
-            var allocatedMemoryCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
-                    .map(c -> c.getMemory().toMegabytes())
-                    .reduce(0L, Long::sum);
-
-            var hasEnoughCpuAvailable = allocatedCpuCapacity + type.getCpuShares() <= vmCpuCapacity;
-            var hasEnoughMemoryAvailable = allocatedMemoryCapacity + type.getMemory().toMegabytes() <= vmMemoryCapacity;
-            var hasTypeNotAllocated = !allocatedContainers.contains(type);
-
-            if (hasEnoughCpuAvailable && hasEnoughMemoryAvailable && hasTypeNotAllocated) {
+            if (Validator.isContainerPlacableOnVm(type, vm, allocatedContainers)) {
                 return vm;
             }
         }

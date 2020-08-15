@@ -4,13 +4,11 @@ import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.VmInstance;
 import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 @Data
 @AllArgsConstructor
+@EqualsAndHashCode
 public class OptimizationResult {
 
     private Map<String, Boolean> vmAllocation;
@@ -20,6 +18,7 @@ public class OptimizationResult {
 
     @Getter
     @RequiredArgsConstructor
+    @EqualsAndHashCode
     public static class AllocationTuple {
         private final VmInstance vm;
         private final ContainerConfiguration type;

@@ -2,19 +2,23 @@
 dataCenters:
   DC-1:
     instanceTypes:
-      - label: 1.micro
-        cpuCores: 2
-        memory: 1024MB
-        cost: 0.5
+#      - label: 1.micro
+#        cpuCores: 2
+#        memory: 1024MB
+#        cost: 0.5
       - label: 2.small
         cpuCores: 2
         memory: 2GB
         cost: 0.5
       - label: 2.medium
-        cpuCores: 4
+        cpuCores: 2
         memory: 4GB
         cost: 0.5
-      - label: 2.large
+      - label: 4.large
+        cpuCores: 4
+        memory: 8GB
+        cost: 0.5
+      - label: 4.xlarge
         cpuCores: 4
         memory: 16GB
         cost: 0.5
@@ -35,33 +39,41 @@ dataCenters:
 services:
   service-a:
     containerConfigurations:
-      - label: 1500@500
+#      - label: 1000@500
+#        rpmCapacity: 1000
+#        cpuShares: 1024
+#        memory: 500MB
+      - label: 1500@1000
         rpmCapacity: 1500
-        cpuShares: 1024
-        memory: 500MB
-      - label: 3000@1500
+        cpuShares: 2048
+        memory: 1000MB
+      - label: 3000@2000
         rpmCapacity: 3000
         cpuShares: 2048
-        memory: 1500MB
-      - label: 6000@3000
-        rpmCapacity: 6000
-        cpuShares: 2048
-        memory: 3000MB
-  service-b:
-    containerConfigurations:
-      - label: 1500@500
-        rpmCapacity: 1500
-        cpuShares: 1024
-        memory: 500MB
-      - label: 2000@600
-        rpmCapacity: 2000
-        cpuShares: 1024
-        memory: 600MB
-      - label: 4000@1800
-        rpmCapacity: 4000
-        cpuShares: 2048
-        memory: 1800MB
-      - label: 8000@3600
+        memory: 2000MB
+      - label: 8000@4000
         rpmCapacity: 8000
         cpuShares: 2048
-        memory: 3600MB
+        memory: 4000MB
+      - label: 12000@8000
+        rpmCapacity: 12000
+        cpuShares: 2048
+        memory: 8000MB
+  service-b:
+    containerConfigurations:
+      - label: 1000@500
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 500MB
+      - label: 1500@1000
+        rpmCapacity: 1500
+        cpuShares: 2048
+        memory: 1000MB
+      - label: 3000@2000
+        rpmCapacity: 3000
+        cpuShares: 2048
+        memory: 2000MB
+      - label: 8000@4000
+        rpmCapacity: 8000
+        cpuShares: 2048
+        memory: 4000MB

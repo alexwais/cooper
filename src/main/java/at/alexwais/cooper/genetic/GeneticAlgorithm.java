@@ -1,5 +1,7 @@
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.Model;
 import at.alexwais.cooper.exec.OptimizationResult;
 import at.alexwais.cooper.exec.State;
@@ -7,10 +9,11 @@ import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
-import io.jenetics.util.Factory;
+import io.jenetics.engine.EvolutionStart;
 import io.jenetics.util.ISeq;
+import java.util.ArrayDeque;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,78 +24,106 @@ public class GeneticAlgorithm {
     private final Model model;
     private final State state;
     private final Mapping mapping;
-    private final List<Genotype<BitGene>> initialPopulation;
+    //    private final List<Genotype<BitGene>> initialPopulation;
     private final FitnessFunction fitnessFunction;
-    private final Factory<Genotype<BitGene>> genotypeFactory;
-    private final Function<Genotype<BitGene>, Boolean[][]> decoder;
-    private final Codec<Boolean[][], BitGene> codec;
+    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> vmRowCodec;
+    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> containerRowCodec;
+    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> flatCodec;
+    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> codec;
+
+    private static final int ENCODING_STRATEGY = 1;
 
     public GeneticAlgorithm(List<OptimizationResult> initialPopulation, Model model, State state) {
         this.model = model;
         this.state = state;
-        this.mapping = new Mapping(model);
-        this.initialPopulation = initialPopulation.stream()
-                .map(mapping::optimizationResultToGenotype)
-                .collect(Collectors.toList());
+        this.mapping = new Mapping(model, state);
+//        this.initialPopulation = initialPopulation.stream()
+//                .map(mapping::optimizationResultToGenotype)
+//                .collect(Collectors.toList());
 
         this.fitnessFunction = new FitnessFunction(model, state, mapping);
 
+        flatCodec = Codec.of(mapping.flatGenotypeFactory(), mapping::flatDecoder);
+        containerRowCodec = Codec.of(mapping.containerRowGenotypeFactory(), mapping::containerRowSquareDecoder);
+        vmRowCodec = Codec.of(mapping.vmRowGenotypeFactory(), mapping::vmRowSquareDecoder);
 
-        decoder = mapping::decoder;
-
-//        decoder = gt -> gt.stream()
-//                .map(ch -> ch.stream().map(BitGene::booleanValue).toArray(Boolean[]::new))
-//                .toArray(Boolean[][]::new);
-
-        //        genotypeFactory = Genotype.of(
-//                BitChromosome.of(mapping.getContainerTypeCount(), 0.001).instances() // a chromosome contains container types allocated to a vm
-//                        .limit(mapping.getVmCount()) // number of chromosomes = number of vms
-//                        .collect(ISeq.toISeq())
-//        );
-        genotypeFactory = Genotype.of(
-                BitChromosome.of(mapping.getContainerTypeCount() * mapping.getVmCount(), 0.001).instances() // a chromosome contains container types allocated to a vm
-                        .limit(1) // number of chromosomes = number of vms
-                        .collect(ISeq.toISeq())
-        );
-
-        codec = Codec.of(genotypeFactory, decoder);
+        if (ENCODING_STRATEGY == 0) {
+            codec = flatCodec;
+        } else if (ENCODING_STRATEGY == 1) {
+            codec = containerRowCodec;
+        } else if (ENCODING_STRATEGY == 2) {
+            codec = vmRowCodec;
+        }
     }
 
     public OptimizationResult run() {
-//        Factory<Genotype<BitGene>> gtf =
-//                Genotype.of(BitChromosome.of(10, 0.5));
-
-        Engine<BitGene, Float> engine = Engine
-                .builder(fitnessFunction::eval, codec)
+        Engine<BitGene, Float> engine1 = Engine
+                .builder(fitnessFunction::eval, containerRowCodec)
                 .minimizing()
                 .populationSize(400)
-                .offspringFraction(0.6)
+                .offspringFraction(0.4)
                 .survivorsSelector(
-                        new EliteSelector<>(10,
-                                new RouletteWheelSelector<BitGene, Float>())
+                        new EliteSelector<>(1,
+                                new RouletteWheelSelector<BitGene, Float>()
+                        )
                 )
                 .offspringSelector(
-                                new TournamentSelector<>(3)
+                        new TournamentSelector<>(3)
                 )
                 .alterers(
-                        new MultiPointCrossover<>(0.1, 2),
+                        new MultiPointCrossover<>(0.2, 1),
+                        new Mutator<>(0.03)
+                )
+                .maximalPhenotypeAge(100)
+                .build();
+
+        Engine<BitGene, Float> engine2 = Engine
+                .builder(fitnessFunction::eval, vmRowCodec)
+                .minimizing()
+                .populationSize(500)
+                .offspringFraction(0.5)
+                .survivorsSelector(
+                        new EliteSelector<>(1,
+                                new RouletteWheelSelector<BitGene, Float>()
+                        )
+                )
+                .offspringSelector(
+                        new TournamentSelector<>(3)
+                )
+                .alterers(
+                        new SinglePointCrossover(0.9),
                         new Mutator<>(0.02)
                 )
                 .maximalPhenotypeAge(100)
                 .build();
 
-//        EvolutionStatistics<Integer, ?> stats = EvolutionStatistics.ofNumber();
-        var phenotype = engine.stream(initialPopulation)
-//                .limit(bySteadyFitness(5))
-                .limit(100)
-//                .peek(stats)
+
+        var stream1Result = new ArrayDeque<>(engine1.stream()
+                .limit(200)
+                .map(this::mapEvolutionStart)
+                .collect(Collectors.toList()));
+
+        var phenotype = engine2.stream(stream1Result::pop)
+                .limit(200)
                 .collect(EvolutionResult.toBestPhenotype());
+        var decodedGenotype = vmRowCodec.decode(phenotype.genotype());
 
-        log.info("Result fitness: {}", phenotype.fitness());
-        var genotype = codec.decode(phenotype.genotype());
+        //        var phenotype = engine1.stream()
+//                .limit(500)
+//                .collect(EvolutionResult.toBestPhenotype());
+//        var decodedGenotype = containerRowCodec.decode(phenotype.genotype());
 
-        return mapping.genotypeToOptimizationResult(genotype);
+
+        //        log.info("Result fitness: {}", phenotype.fitness());
+        return mapping.genotypeToOptimizationResult(decodedGenotype);
     }
 
+    private EvolutionStart<BitGene, Float> mapEvolutionStart(EvolutionResult<BitGene, Float> evo) {
+        ISeq<Phenotype<BitGene, Float>> mappedPopulation = evo.population().stream()
+                .map(phenotype -> (Phenotype<BitGene, Float>) Phenotype.of(mapping.mapContainerToVmGenotype(phenotype.genotype()), phenotype.generation()))
+                .collect(ISeq.toISeq());
+
+        return EvolutionStart.of(mappedPopulation, evo.generation());
+    }
 
 }

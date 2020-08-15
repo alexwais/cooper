@@ -10,6 +10,7 @@ import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +42,7 @@ public class CooperExecution {
             log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
 
 //        if (clock == 100L) scheduler.launchVm("1.micro", "DC-1");
-            if (clock > 600L) scheduler.abort();
+            if (clock > 100L) scheduler.abort();
 
             // MAPE-K (Monitor - Analyze(Optimize) - Plan - Execute)
             monitor();
@@ -67,15 +68,25 @@ public class CooperExecution {
     private List<OptimizationResult> historicOptResults = new ArrayList<>();
 
     private OptimizationResult optimize() {
-//        return new GreedyOptimizer(model, state).optimize();
-
-
         var greedyResult = new GreedyOptimizer(model, state).optimize();
-        historicOptResults.add(greedyResult);
+//        return greedyResult;
 
-        var optimizer = new GeneticAlgorithm(historicOptResults, model, state);
+        if (historicOptResults.isEmpty()) {
+            historicOptResults.add(greedyResult);
+        }
+
+        var optimizer = new GeneticAlgorithm(Collections.emptyList(), model, state);
         var result = optimizer.run();
+        historicOptResults.clear();
         historicOptResults.add(result);
+
+
+        if (greedyResult.equals(result)) {
+            log.warn("      *** GA == GREEDY *** ");
+        } else {
+            log.info("      *** GA != GREEDY *** ");
+        }
+
         return result;
     }
 
