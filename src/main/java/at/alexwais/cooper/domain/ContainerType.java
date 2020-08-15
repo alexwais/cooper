@@ -8,7 +8,7 @@ import org.springframework.util.unit.DataSize;
 @Getter
 @AllArgsConstructor
 @EqualsAndHashCode
-public class ContainerConfiguration {
+public class ContainerType {
 
     private String label;
 

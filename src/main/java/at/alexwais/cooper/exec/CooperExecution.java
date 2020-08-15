@@ -5,7 +5,7 @@ import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
@@ -104,8 +104,8 @@ public class CooperExecution {
             }
         });
 
-        List<Pair<String, ContainerConfiguration>> containerLaunchList = new ArrayList<>();
-        List<Pair<String, ContainerConfiguration>> containerKillList = new ArrayList<>();
+        List<Pair<String, ContainerType>> containerLaunchList = new ArrayList<>();
+        List<Pair<String, ContainerType>> containerKillList = new ArrayList<>();
 
         opt.getContainerAllocation().stream()
                 .forEach(a -> {

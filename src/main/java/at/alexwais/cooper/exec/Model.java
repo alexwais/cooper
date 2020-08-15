@@ -1,6 +1,6 @@
 package at.alexwais.cooper.exec;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
@@ -17,7 +17,7 @@ public class Model {
     private final Map<String, VmInstance> vms;
     private final Map<String, Service> services;
 //    private final Map<String, ContainerInstance> containers;
-    private final List<ContainerConfiguration> containerTypes;
+    private final List<ContainerType> containerTypes;
 
     public Model(List<DataCenter> dataCenters, List<Service> services) {
         this.dataCenters = dataCenters.stream()
@@ -36,7 +36,7 @@ public class Model {
 //                .collect(Collectors.toMap(ContainerInstance::getId, Function.identity()));
 
         this.containerTypes = services.stream()
-                .flatMap(s -> s.getContainerConfigurations().stream())
+                .flatMap(s -> s.getContainerTypes().stream())
                 .collect(Collectors.toList());
     }
 

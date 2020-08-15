@@ -3,8 +3,8 @@ package at.alexwais.cooper.exec;
 import static at.alexwais.cooper.exec.MapUtils.putToMapList;
 import static at.alexwais.cooper.exec.MapUtils.removeContainerFromMapList;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.ContainerInstance;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -77,7 +77,7 @@ public class State {
         return Pair.of(freeCpuCapacity, freeMemoryCapacity);
     }
 
-    public void allocateContainerInstance(String vmId, ContainerConfiguration type, long providerId) {
+    public void allocateContainerInstance(String vmId, ContainerType type, long providerId) {
         var vm = model.getVms().get(vmId);
         var isDuplicate = getRunningContainersByVm(vm.getId()).stream()
                 .anyMatch(c -> c.getConfiguration().equals(type));

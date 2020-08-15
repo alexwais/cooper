@@ -13,6 +13,6 @@ public class Service {
 
     private final String name;
 
-    private List<ContainerConfiguration> containerConfigurations = new ArrayList<>();
+    private List<ContainerType> containerTypes = new ArrayList<>();
 
 }

@@ -11,7 +11,7 @@ public class ContainerInstance {
 
 //    private final String id;
 
-    private final ContainerConfiguration configuration;
+    private final ContainerType configuration;
 
     private final Service service;
 

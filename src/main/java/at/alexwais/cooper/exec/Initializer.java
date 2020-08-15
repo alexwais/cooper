@@ -51,8 +51,8 @@ public class Initializer {
 
 //            var totalInstanceCounter = 1000;
             for (var c : config.getContainerConfigurations()) {
-                var containerConfiguration = new ContainerConfiguration(c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
-                service.getContainerConfigurations().add(containerConfiguration);
+                var containerConfiguration = new ContainerType(c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
+                service.getContainerTypes().add(containerConfiguration);
 
 //                var containers = new ArrayList<ContainerInstance>();
 //                for (int j = 0; j < INSTANCE_COUNT; j++) {
@@ -95,7 +95,7 @@ public class Initializer {
 
     private ConsoleTable buildTable(Service service) {
         var table = new ConsoleTable("Type");
-        service.getContainerConfigurations().forEach(it -> {
+        service.getContainerTypes().forEach(it -> {
             table.addRow(it.getLabel());
         });
         return table;

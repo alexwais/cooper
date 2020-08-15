@@ -1,6 +1,6 @@
 package at.alexwais.cooper.exec;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +21,7 @@ public class OptimizationResult {
     @EqualsAndHashCode
     public static class AllocationTuple {
         private final VmInstance vm;
-        private final ContainerConfiguration type;
+        private final ContainerType type;
         private final boolean allocate;
     }
 

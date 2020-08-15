@@ -1,6 +1,6 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.Model;
 import at.alexwais.cooper.exec.OptimizationResult;
@@ -26,10 +26,10 @@ public class GeneticAlgorithm {
     private final Mapping mapping;
     //    private final List<Genotype<BitGene>> initialPopulation;
     private final FitnessFunction fitnessFunction;
-    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> vmRowCodec;
-    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> containerRowCodec;
-    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> flatCodec;
-    private final Codec<Map<VmInstance, List<ContainerConfiguration>>, BitGene> codec;
+    private final Codec<Map<VmInstance, List<ContainerType>>, BitGene> vmRowCodec;
+    private final Codec<Map<VmInstance, List<ContainerType>>, BitGene> containerRowCodec;
+    private final Codec<Map<VmInstance, List<ContainerType>>, BitGene> flatCodec;
+    private final Codec<Map<VmInstance, List<ContainerType>>, BitGene> codec;
 
     private static final int ENCODING_STRATEGY = 1;
 

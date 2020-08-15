@@ -1,6 +1,6 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.Model;
 import at.alexwais.cooper.exec.OptimizationResult;
@@ -21,7 +21,7 @@ public class Mapping {
     private int vmCount;
     private int containerTypeCount;
     private final Map<VmInstance, Integer> vmsIndex = new HashMap<>();
-    private final Map<ContainerConfiguration, Integer> containerTypesIndex = new HashMap<>();
+    private final Map<ContainerType, Integer> containerTypesIndex = new HashMap<>();
 
     public Mapping(Model model, State state) {
         this.model = model;
@@ -40,11 +40,11 @@ public class Mapping {
         }
     }
 
-    public Map<VmInstance, List<ContainerConfiguration>> matrixToAllocation(Boolean[][] encodedGenotype, Boolean rowsAreContainers) {
-        var result = new HashMap<VmInstance, List<ContainerConfiguration>>();
+    public Map<VmInstance, List<ContainerType>> matrixToAllocation(Boolean[][] encodedGenotype, Boolean rowsAreContainers) {
+        var result = new HashMap<VmInstance, List<ContainerType>>();
 
         vmsIndex.forEach((vm, vmi) -> {
-            var containerList = new ArrayList<ContainerConfiguration>();
+            var containerList = new ArrayList<ContainerType>();
             containerTypesIndex.forEach((type, cti) -> {
 
                 var isAllocated = rowsAreContainers ? encodedGenotype[cti][vmi] : encodedGenotype[vmi][cti];
@@ -61,7 +61,7 @@ public class Mapping {
         return result;
     }
 
-    public OptimizationResult genotypeToOptimizationResult(Map<VmInstance, List<ContainerConfiguration>> genotype) {
+    public OptimizationResult genotypeToOptimizationResult(Map<VmInstance, List<ContainerType>> genotype) {
         var vmAllocation = new HashMap<String, Boolean>();
 
         // Map vmContainerAllocation to result data structure
@@ -88,7 +88,7 @@ public class Mapping {
 //                .map(m -> m.stream().map(mapping::ofDecodedGenotype).collect(Collectors.toList()));
     }
 
-    public Genotype<BitGene> ofDecodedGenotype(Map<VmInstance, List<ContainerConfiguration>> decodedGenotype) {
+    public Genotype<BitGene> ofDecodedGenotype(Map<VmInstance, List<ContainerType>> decodedGenotype) {
         var chromosomes = new ArrayList<BitSet>();
         for (int i = 0; i < vmCount; i++) {
             chromosomes.add(new BitSet(containerTypeCount));
@@ -157,7 +157,7 @@ public class Mapping {
 //        );
 //    }
 
-    public Map<VmInstance, List<ContainerConfiguration>> flatDecoder(Genotype<BitGene> gt) {
+    public Map<VmInstance, List<ContainerType>> flatDecoder(Genotype<BitGene> gt) {
         var chromosome = gt.get(0);
         var matrix = new Boolean[vmCount][containerTypeCount];
 
@@ -172,7 +172,7 @@ public class Mapping {
         return matrixToAllocation(matrix, false);
     }
 
-    public Map<VmInstance, List<ContainerConfiguration>> containerRowSquareDecoder(Genotype<BitGene> gt) {
+    public Map<VmInstance, List<ContainerType>> containerRowSquareDecoder(Genotype<BitGene> gt) {
         var matrix = gt.stream()
                 .map(ch -> ch.stream().map(BitGene::booleanValue).toArray(Boolean[]::new))
                 .toArray(Boolean[][]::new);
@@ -180,7 +180,7 @@ public class Mapping {
         return matrixToAllocation(matrix, true);
     }
 
-    public Map<VmInstance, List<ContainerConfiguration>> vmRowSquareDecoder(Genotype<BitGene> gt) {
+    public Map<VmInstance, List<ContainerType>> vmRowSquareDecoder(Genotype<BitGene> gt) {
         var matrix = gt.stream()
                 .map(ch -> ch.stream().map(BitGene::booleanValue).toArray(Boolean[]::new))
                 .toArray(Boolean[][]::new);
@@ -214,11 +214,11 @@ public class Mapping {
     }
 
 
-    private double shareOfServiceLoadToOverallCapacity(ContainerConfiguration containerType) {
+    private double shareOfServiceLoadToOverallCapacity(ContainerType containerType) {
         var service = containerType.getService();
 
         var overallServiceLoad = state.getServiceLoad().get(service.getName());
-        var overallCapacityForService = service.getContainerConfigurations().stream()
+        var overallCapacityForService = service.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);
         var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?

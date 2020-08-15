@@ -1,6 +1,6 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.MapUtils;
@@ -17,21 +17,21 @@ public class FitnessFunction {
     private final State state;
     private final Mapping mapping;
 
-    public float eval(Map<VmInstance, List<ContainerConfiguration>> allocation) {
+    public float eval(Map<VmInstance, List<ContainerType>> allocation) {
         var violations = 0f;
 
         var allocatedContainers = allocation.values().stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
-        var allocatedContainersByService = new HashMap<String, List<ContainerConfiguration>>();
+        var allocatedContainersByService = new HashMap<String, List<ContainerType>>();
         allocatedContainers.forEach(c -> {
             MapUtils.putToMapList(allocatedContainersByService, c.getService().getName(), c);
         });
 
         var wastedMemory = 0;
         var containersOnSameVm = 0;
-        for (Map.Entry<VmInstance, List<ContainerConfiguration>> e : allocation.entrySet()) {
+        for (Map.Entry<VmInstance, List<ContainerType>> e : allocation.entrySet()) {
             var vm = e.getKey();
             var allocatedTypes = e.getValue();
             var availableMemory = vm.getType().getMemory();
@@ -49,7 +49,7 @@ public class FitnessFunction {
         var overCapacity = 0;
         for (Service s : model.getServices().values()) {
             var rpmCap = allocatedContainersByService.getOrDefault(s.getName(), Collections.emptyList()).stream()
-                    .map(ContainerConfiguration::getRpmCapacity)
+                    .map(ContainerType::getRpmCapacity)
                     .reduce(0L, Long::sum);
             capacityPerService.put(s.getName(), rpmCap);
 

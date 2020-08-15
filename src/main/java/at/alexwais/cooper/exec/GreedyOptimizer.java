@@ -1,7 +1,7 @@
 package at.alexwais.cooper.exec;
 
-import at.alexwais.cooper.domain.ContainerConfiguration;
 import at.alexwais.cooper.domain.ContainerInstance;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,7 +26,7 @@ public class GreedyOptimizer {
         });
     }
 
-    private  Map<String, List<ContainerConfiguration>> vmContainerAllocation;
+    private  Map<String, List<ContainerType>> vmContainerAllocation;
     private final List<VmInstance> vmsToProvision = new ArrayList<>();
 
     public OptimizationResult optimize() {
@@ -38,7 +38,7 @@ public class GreedyOptimizer {
                 ));
 
         // Determine containers to provision/deprovision based on load delta
-        ArrayList<ContainerConfiguration> containerTypesToProvision = new ArrayList<>();
+        ArrayList<ContainerType> containerTypesToProvision = new ArrayList<>();
         loadDeltaPerService.forEach((serviceName, delta) -> {
             if (delta > 0) { // underprovisioned
                 containerTypesToProvision.addAll(allocateUnderprovisionedResources(serviceName, delta));
@@ -108,7 +108,7 @@ public class GreedyOptimizer {
     }
 
 
-    private VmInstance getFreeInstanceForContainer(ContainerConfiguration type) {
+    private VmInstance getFreeInstanceForContainer(ContainerType type) {
         return model.getVms().values().stream()
                 .filter(vm -> !state.getLeasedVms().contains(vm))
                 .filter(vm -> !vmsToProvision.contains(vm))
@@ -116,7 +116,7 @@ public class GreedyOptimizer {
                 .findFirst().orElseThrow(() -> new IllegalStateException("No free vm instances left"));
     }
 
-    private VmInstance tryToProvisionOnLeasedVm(ContainerConfiguration type) {
+    private VmInstance tryToProvisionOnLeasedVm(ContainerType type) {
         for (var vmId : vmContainerAllocation.keySet()) {
             var vm = model.getVms().get(vmId);
             var allocatedContainers = vmContainerAllocation.get(vm.getId());
@@ -128,13 +128,13 @@ public class GreedyOptimizer {
         return null;
     }
 
-    private List<ContainerConfiguration> allocateUnderprovisionedResources(String serviceName, long delta) {
+    private List<ContainerType> allocateUnderprovisionedResources(String serviceName, long delta) {
         var service = model.getServices().get(serviceName);
-        var types = service.getContainerConfigurations().stream()
-                .sorted(Comparator.comparingLong(ContainerConfiguration::getRpmCapacity).reversed())
+        var types = service.getContainerTypes().stream()
+                .sorted(Comparator.comparingLong(ContainerType::getRpmCapacity).reversed())
                 .iterator();
 
-        var result = new ArrayList<ContainerConfiguration>();
+        var result = new ArrayList<ContainerType>();
 
         var currentType = types.next();
         while (delta > 0) {
