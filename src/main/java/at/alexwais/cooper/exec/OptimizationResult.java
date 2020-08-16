@@ -2,6 +2,8 @@ package at.alexwais.cooper.exec;
 
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import lombok.*;
@@ -11,12 +13,23 @@ import lombok.*;
 @EqualsAndHashCode
 public class OptimizationResult {
 
-    private Map<String, Boolean> vmAllocation;
-//    private Map<String, List<String>> containerAllocation; // VM IDs to a List of Container Types
+    private Model model;
 
-    private List<AllocationTuple> containerAllocation;
+    private Map<VmInstance, List<ContainerType>> allocation;
 
-    private Float fitness;
+
+    public List<OptimizationResult.AllocationTuple> getTuples() {
+        List<OptimizationResult.AllocationTuple> resultTuples = new ArrayList<>();
+        model.getVms().values().forEach(vm -> {
+            model.getContainerTypes().forEach(type -> {
+                var containerList = allocation.getOrDefault(vm, Collections.emptyList());
+                var allocate = containerList.contains(type);
+                var tuple = new OptimizationResult.AllocationTuple(vm, type, allocate);
+                resultTuples.add(tuple);
+            });
+        });
+        return resultTuples;
+    }
 
     @Getter
     @RequiredArgsConstructor

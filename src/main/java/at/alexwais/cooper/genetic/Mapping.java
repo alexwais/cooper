@@ -3,12 +3,10 @@ package at.alexwais.cooper.genetic;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.Model;
-import at.alexwais.cooper.exec.OptimizationResult;
 import at.alexwais.cooper.exec.State;
 import io.jenetics.BitChromosome;
 import io.jenetics.BitGene;
 import io.jenetics.Genotype;
-import io.jenetics.Phenotype;
 import io.jenetics.util.ISeq;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -62,26 +60,6 @@ public class Mapping {
         return result;
     }
 
-    public OptimizationResult phenotypeToOptimizationResult(Phenotype<BitGene, Float> phenotype) {
-        var genotype = containerRowSquareDecoder(phenotype.genotype());
-
-        var vmAllocation = new HashMap<String, Boolean>();
-
-        // Map vmContainerAllocation to result data structure
-        List<OptimizationResult.AllocationTuple> allocationTuples = new ArrayList<>();
-        model.getVms().values().forEach(vm -> {
-            var containerList = genotype.getOrDefault(vm, Collections.emptyList());
-            vmAllocation.put(vm.getId(), !containerList.isEmpty());
-            model.getContainerTypes().forEach(type -> {
-                var allocate = containerList.contains(type);
-                var tuple = new OptimizationResult.AllocationTuple(vm, type, allocate);
-                allocationTuples.add(tuple);
-            });
-        });
-
-        return new OptimizationResult(vmAllocation, allocationTuples, phenotype.fitness());
-    }
-
 
     public Genotype<BitGene> mapContainerToVmGenotype(Genotype<BitGene> containerRowGenotype) {
         var allocation = containerRowSquareDecoder(containerRowGenotype);
@@ -112,28 +90,28 @@ public class Mapping {
         return Genotype.of(wrappedChromosomes);
     }
 
-    public Genotype<BitGene> optimizationResultToGenotype(OptimizationResult optResult) {
-        assert optResult.getContainerAllocation().size() == vmCount * containerTypeCount;
-
-        // Chromosome bit sets are initialized with all bits {@code false}.
-        var chromosome = new BitSet(containerTypeCount * vmCount);
-
-//        for (int i = 0; i < vmCount; i++) {
-//            chromosomes.add(new BitSet(containerTypeCount));
-//        }
-
-        optResult.getContainerAllocation().stream()
-                .filter(OptimizationResult.AllocationTuple::isAllocate)
-                .forEach(tuple -> {
-                    var vmIndex = vmsIndex.get(tuple.getVm());
-                    var typeIndex = containerTypesIndex.get(tuple.getType());
-
-                    var offset = containerTypeCount * vmIndex;
-                    chromosome.set(offset + typeIndex);
-                });
-
-        return Genotype.of(BitChromosome.of(chromosome, containerTypeCount * vmCount));
-    }
+//    public Genotype<BitGene> optimizationResultToGenotype(OptimizationResult optResult) {
+//        assert optResult.getAllocationTuples().size() == vmCount * containerTypeCount;
+//
+//        // Chromosome bit sets are initialized with all bits {@code false}.
+//        var chromosome = new BitSet(containerTypeCount * vmCount);
+//
+////        for (int i = 0; i < vmCount; i++) {
+////            chromosomes.add(new BitSet(containerTypeCount));
+////        }
+//
+//        optResult.getAllocationTuples().stream()
+//                .filter(OptimizationResult.AllocationTuple::isAllocate)
+//                .forEach(tuple -> {
+//                    var vmIndex = vmsIndex.get(tuple.getVm());
+//                    var typeIndex = containerTypesIndex.get(tuple.getType());
+//
+//                    var offset = containerTypeCount * vmIndex;
+//                    chromosome.set(offset + typeIndex);
+//                });
+//
+//        return Genotype.of(BitChromosome.of(chromosome, containerTypeCount * vmCount));
+//    }
 
 //    public Genotype<BitGene> optimizationResultToGenotype(OptimizationResult optResult) {
 //        assert optResult.getContainerAllocation().size() == vmCount * containerTypeCount;

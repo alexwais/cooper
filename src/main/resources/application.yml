@@ -45,11 +45,11 @@ services:
 #        memory: 500MB
       - label: 1500@1000
         rpmCapacity: 1500
-        cpuShares: 2048
+        cpuShares: 1024
         memory: 1000MB
       - label: 3000@2000
         rpmCapacity: 3000
-        cpuShares: 2048
+        cpuShares: 1024
         memory: 2000MB
       - label: 8000@4000
         rpmCapacity: 8000
@@ -67,11 +67,11 @@ services:
         memory: 500MB
       - label: 1500@1000
         rpmCapacity: 1500
-        cpuShares: 2048
+        cpuShares: 1024
         memory: 1000MB
       - label: 3000@2000
         rpmCapacity: 3000
-        cpuShares: 2048
+        cpuShares: 1024
         memory: 2000MB
       - label: 8000@4000
         rpmCapacity: 8000

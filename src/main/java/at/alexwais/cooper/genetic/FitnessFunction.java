@@ -6,6 +6,7 @@ import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.exec.MapUtils;
 import at.alexwais.cooper.exec.Model;
 import at.alexwais.cooper.exec.State;
+import at.alexwais.cooper.exec.Validator;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -14,11 +15,10 @@ import lombok.RequiredArgsConstructor;
 public class FitnessFunction {
 
     private final Model model;
-    private final State state;
-    private final Mapping mapping;
+    private final Validator validator;
 
-    public float eval(Map<VmInstance, List<ContainerType>> allocation) {
-        var violations = 0f;
+    public float eval(Map<VmInstance, List<ContainerType>> allocation, State state) {
+        var violations = validator.violations(allocation, state.getServiceLoad());
 
         var allocatedContainers = allocation.values().stream()
                 .flatMap(Collection::stream)
@@ -36,9 +36,6 @@ public class FitnessFunction {
             var allocatedTypes = e.getValue();
             var availableMemory = vm.getType().getMemory();
             var requiredMemory = allocatedTypes.stream().map(t -> t.getMemory().toMegabytes()).reduce(0L, Long::sum);
-            if (availableMemory < requiredMemory) {
-                violations++;
-            }
             wastedMemory += Math.abs(availableMemory - requiredMemory);
             if (allocatedTypes.size() > 1) {
                 containersOnSameVm += allocatedTypes.size();
@@ -58,19 +55,10 @@ public class FitnessFunction {
             overCapacity += overCap;
         }
 
-        for (Map.Entry<String, Long> entry : state.getServiceLoad().entrySet()) {
-            String serviceName = entry.getKey();
-            Long load = entry.getValue();
-            var capacity = capacityPerService.get(serviceName);
-            if (capacity < load) {
-                violations += load - capacity;
-            }
-        }
 
         var allocatedVmCount = allocation.size();
-        var allocatedContainerCount = allocatedContainers.size();
 
-        var fitness = allocatedVmCount * 100 - containersOnSameVm * 1000 + overCapacity + wastedMemory * 100 + violations * 10_000_000_000f;
+        var fitness = allocatedVmCount * 100 - containersOnSameVm * 1000 + overCapacity + wastedMemory * 100 + violations * 10_000_000f;
         return fitness;
     }
 

@@ -93,18 +93,10 @@ public class GreedyOptimizer {
                     return allocate;
                 }));
 
-        // Map vmContainerAllocation to result data structure
-        List<OptimizationResult.AllocationTuple> result = new ArrayList<>();
-        model.getVms().values().forEach(vm -> {
-            model.getContainerTypes().forEach(type -> {
-                var containerList = vmContainerAllocation.getOrDefault(vm.getId(), Collections.emptyList());
-                var allocate = containerList.contains(type);
-                var tuple = new OptimizationResult.AllocationTuple(vm, type, allocate);
-                result.add(tuple);
-            });
-        });
+        var alloc = vmContainerAllocation.entrySet().stream()
+                .collect(Collectors.toMap(e -> model.getVms().get(e.getKey()), Map.Entry::getValue));
 
-        return new OptimizationResult(resultAllocatedVms, result, 0f);
+        return new OptimizationResult(model, alloc);
     }
 
 

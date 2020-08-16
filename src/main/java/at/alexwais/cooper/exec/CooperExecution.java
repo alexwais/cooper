@@ -8,6 +8,7 @@ import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,11 +26,16 @@ public class CooperExecution {
     private final Model model;
     private final State state;
 
+    private final Validator validator;
+    private final FitnessFunction fitnessFunction;
+
     private final long MAX_RUNTIME = 300L;
 
     public CooperExecution(List<DataCenter> dataCenters, List<Service> services) {
         this.model = new Model(dataCenters, services);
         this.state = new State(model);
+        this.validator = new Validator(model);
+        this.fitnessFunction = new FitnessFunction(model, validator);
     }
 
 
@@ -39,7 +45,8 @@ public class CooperExecution {
     }
 
     private void tearDown() {
-        log.info(" *** Total Fitness: {}", totalFitness);
+        log.info(" *** Total Genetic Fitness: {}", totalGeneticFitness);
+        log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
     }
 
     class SchedulingListener implements Listener {
@@ -76,28 +83,23 @@ public class CooperExecution {
     }
 
 
-    private float totalFitness = 0;
+    private float totalGreedyFitness = 0;
+    private float totalGeneticFitness = 0;
 
     private OptimizationResult optimize() {
         var greedyResult = new GreedyOptimizer(model, state).optimize();
-//        return greedyResult;
+        var greedyFitness = fitnessFunction.eval(greedyResult.getAllocation(), state);
+        totalGreedyFitness += greedyFitness;
 
-//        if (historicOptResults.isEmpty()) {
-//            historicOptResults.add(greedyResult);
-//        }
+        var geneticOptimizer = new GeneticAlgorithm(Collections.emptyList(), model, state, validator);
+        var geneticResult = geneticOptimizer.run();
+        var geneticFitness = fitnessFunction.eval(geneticResult.getAllocation(), state);
+        totalGeneticFitness += geneticFitness;
 
-        var optimizer = new GeneticAlgorithm(Collections.emptyList(), model, state);
-        var result = optimizer.run();
-//        historicOptResults.clear();
-//        historicOptResults.add(result);
-
-        totalFitness += result.getFitness();
-        if (greedyResult.equals(result)) {
-            log.warn("      *** GA == GREEDY *** ");
-        } else {
-            log.info("      *** GA != GREEDY *** ");
+        var result = geneticResult;
+        if (!validator.isAllocationValid(result.getAllocation(), state.getServiceLoad())) {
+            throw new IllegalStateException("Invalid allocation!");
         }
-
         return result;
     }
 
@@ -105,8 +107,9 @@ public class CooperExecution {
         List<String> vmLaunchList = new ArrayList<>();
         List<String> vmKillList = new ArrayList<>();
 
-        opt.getVmAllocation().forEach((vmId, shouldRun) -> {
+        model.getVms().forEach((vmId, vm) -> {
             var isRunning = state.getLeasedProviderVms().containsKey(vmId);
+            var shouldRun = opt.getAllocation().containsKey(vm);
 
             if (!isRunning && shouldRun) {
                 vmLaunchList.add(vmId);
@@ -115,10 +118,20 @@ public class CooperExecution {
             }
         });
 
+//        opt.getVmAllocation().forEach((vmId, shouldRun) -> {
+//            var isRunning = state.getLeasedProviderVms().containsKey(vmId);
+//
+//            if (!isRunning && shouldRun) {
+//                vmLaunchList.add(vmId);
+//            } else if (isRunning && !shouldRun) {
+//                vmKillList.add(vmId);
+//            }
+//        });
+
         List<Pair<String, ContainerType>> containerLaunchList = new ArrayList<>();
         List<Pair<String, ContainerType>> containerKillList = new ArrayList<>();
 
-        opt.getContainerAllocation().stream()
+        opt.getTuples().stream()
                 .forEach(a -> {
                     var allocate = a.isAllocate();
                     var containersRunningOnVm = state.getRunningContainersByVm(a.getVm().getId());
