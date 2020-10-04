@@ -31,14 +31,29 @@ public class FitnessFunction {
 
         var wastedMemory = 0;
         var containersOnSameVm = 0;
+        var totalCost = 0f;
+        var affinityBonus = 0f;
         for (Map.Entry<VmInstance, List<ContainerType>> e : allocation.entrySet()) {
             var vm = e.getKey();
             var allocatedTypes = e.getValue();
+
+            totalCost += vm.getType().getCost();
+
             var availableMemory = vm.getType().getMemory();
             var requiredMemory = allocatedTypes.stream().map(t -> t.getMemory().toMegabytes()).reduce(0L, Long::sum);
             wastedMemory += Math.abs(availableMemory - requiredMemory);
             if (allocatedTypes.size() > 1) {
                 containersOnSameVm += allocatedTypes.size();
+            }
+
+            for (var c1 : allocatedTypes) {
+                for (var c2 : allocatedTypes) {
+                    if (c1.getService().equals(c2.getService())) continue;
+                    var affinityGraph = state.getServiceAffinity();
+                    var edge = affinityGraph.getEdge(c1.getService().getName(), c2.getService().getName());
+                    var aff = affinityGraph.getEdgeWeight(edge);
+                    affinityBonus += aff;
+                }
             }
         }
 
@@ -56,9 +71,7 @@ public class FitnessFunction {
         }
 
 
-        var allocatedVmCount = allocation.size();
-
-        var fitness = allocatedVmCount * 100 - containersOnSameVm * 1000 + overCapacity + wastedMemory * 100 + violations * 10_000_000f;
+        var fitness = totalCost * 100 - affinityBonus * 100 + overCapacity + violations * 10_000_000f + wastedMemory; // - containersOnSameVm * 100;
         return fitness;
     }
 

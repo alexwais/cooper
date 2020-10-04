@@ -69,7 +69,7 @@ public class GeneticAlgorithm {
                 .minimizing()
                 .populationSize(500)
                 .offspringFraction(0.5)
-                .survivorsSelector(
+                .selector(
                         new EliteSelector<>(1,
                                 new TournamentSelector<BitGene, Float>(3)
                         )

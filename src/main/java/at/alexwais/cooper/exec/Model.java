@@ -16,10 +16,10 @@ public class Model {
     private final Map<String, DataCenter> dataCenters;
     private final Map<String, VmInstance> vms;
     private final Map<String, Service> services;
-//    private final Map<String, ContainerInstance> containers;
     private final List<ContainerType> containerTypes;
+    private final Map<String, Map<String, Float>> downstreamRequestMultiplier;
 
-    public Model(List<DataCenter> dataCenters, List<Service> services) {
+    public Model(List<DataCenter> dataCenters, List<Service> services, Map<String, Map<String, Float>> downstreamRequestMultiplier) {
         this.dataCenters = dataCenters.stream()
                 .collect(Collectors.toMap(DataCenter::getName, Function.identity()));
 
@@ -30,14 +30,11 @@ public class Model {
         this.services = services.stream()
                 .collect(Collectors.toMap(Service::getName, Function.identity()));
 
-
-//        this.containers = services.stream()
-//                .flatMap(s -> s.getContainers().stream())
-//                .collect(Collectors.toMap(ContainerInstance::getId, Function.identity()));
-
         this.containerTypes = services.stream()
                 .flatMap(s -> s.getContainerTypes().stream())
                 .collect(Collectors.toList());
+
+        this.downstreamRequestMultiplier = downstreamRequestMultiplier;
     }
 
 }

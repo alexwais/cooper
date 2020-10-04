@@ -6,16 +6,17 @@ import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.DataCenter;
-import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Slf4j
 public class CooperExecution {
@@ -31,8 +32,8 @@ public class CooperExecution {
 
     private final long MAX_RUNTIME = 300L;
 
-    public CooperExecution(List<DataCenter> dataCenters, List<Service> services) {
-        this.model = new Model(dataCenters, services);
+    public CooperExecution(Model model) {
+        this.model = model;
         this.state = new State(model);
         this.validator = new Validator(model);
         this.fitnessFunction = new FitnessFunction(model, validator);
@@ -79,7 +80,51 @@ public class CooperExecution {
     }
 
     private void monitor() {
-        state.getServiceLoad().putAll(monitor.getCurrentServiceLoad());
+        state.getIncomingServiceLoad().clear();
+        state.getDownstreamServiceLoad().clear();
+        state.getServiceLoad().clear();
+
+        state.getIncomingServiceLoad().putAll(monitor.getCurrentServiceLoad());
+        var overallIncomingLoad = state.getIncomingServiceLoad().values().stream()
+                .reduce(0L, Long::sum);
+
+        var affinityGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
+        model.getServices().values().forEach(s -> affinityGraph.addVertex(s.getName()));
+        model.getServices().values().forEach(s1 -> {
+            model.getServices().values().forEach(s2 -> {
+                if (!s1.equals(s2)) {
+                    affinityGraph.addEdge(s1.getName(), s2.getName(), new DefaultWeightedEdge());
+                    var edge = affinityGraph.getEdge(s1.getName(), s2.getName());
+                    affinityGraph.setEdgeWeight(edge, 0);
+                }
+            });
+        });
+
+        model.getDownstreamRequestMultiplier().forEach((s1, innerMap) -> {
+            innerMap.forEach((s2, r) -> {
+                var incomingLoad = state.getIncomingServiceLoad().get(s1);
+                var downstreamLoad = ((Float) (incomingLoad * r)).longValue();
+
+                var oldValue = state.getDownstreamServiceLoad().getOrDefault(s2, 0L);
+                var newValue = oldValue + downstreamLoad;
+                state.getDownstreamServiceLoad().put(s2, newValue);
+
+                if (r > 0) {
+                    var aff = (double) downstreamLoad / (double) overallIncomingLoad;
+                    var edge = affinityGraph.getEdge(s1, s2);
+                    var oldEdgeValue = affinityGraph.getEdgeWeight(edge);
+                    var newEdgeValue = oldEdgeValue + aff;
+                    affinityGraph.setEdgeWeight(edge, newEdgeValue);
+                }
+            });
+        });
+
+        var mergedLoad = state.getIncomingServiceLoad().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() + state.getDownstreamServiceLoad().get(e.getKey())));
+        state.setServiceAffinity(affinityGraph);
+
+        state.getServiceLoad().putAll(mergedLoad);
+
     }
 
 
@@ -205,7 +250,7 @@ public class CooperExecution {
         var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "Containers");
         state.getLeasedVms().forEach(vm -> {
             var containerList = state.getRunningContainersByVm().get(vm.getId());
-            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
+            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getService().getName() + ":" + c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
             var capacity = state.getFreeCapacity(vm.getId());
             table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), allocatedContainerTypes);
         });

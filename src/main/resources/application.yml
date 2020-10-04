@@ -9,19 +9,19 @@ dataCenters:
       - label: 2.small
         cpuCores: 2
         memory: 2GB
-        cost: 0.5
+        cost: 0.027
       - label: 2.medium
         cpuCores: 2
         memory: 4GB
-        cost: 0.5
+        cost: 0.052
       - label: 4.large
         cpuCores: 4
         memory: 8GB
-        cost: 0.5
+        cost: 0.1
       - label: 4.xlarge
         cpuCores: 4
         memory: 16GB
-        cost: 0.5
+        cost: 0.19
 #  DC-2:
 #    instanceTypes:
 #      - label: 2.medium
@@ -38,6 +38,8 @@ dataCenters:
 #        cost: 0.5
 services:
   service-a:
+    downstreamServices:
+      service-b: 0.5
     containerConfigurations:
 #      - label: 1000@500
 #        rpmCapacity: 1000

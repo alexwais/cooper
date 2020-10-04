@@ -5,7 +5,9 @@ import at.alexwais.cooper.config.DataCenterConfigMap;
 import at.alexwais.cooper.config.ServiceConfigMap;
 import at.alexwais.cooper.domain.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 
 public class Initializer {
@@ -16,12 +18,30 @@ public class Initializer {
     private List<DataCenter> dataCenters = new ArrayList<>();
     @Getter
     private List<Service> services = new ArrayList<>();
+    @Getter
+    private Map<String, Map<String, Float>> downstreamRequestMultiplier = new HashMap<>();
 
     public Initializer(DataCenterConfigMap dataCenterConfig, ServiceConfigMap serviceConfig) {
         initDataCenters(dataCenterConfig);
         initServices(serviceConfig);
+        initDownstreamRequestMultiplier(serviceConfig);
     }
 
+    private void initDownstreamRequestMultiplier(ServiceConfigMap serviceConfigMap) {
+        services.forEach(s1 -> {
+            var innerMap = new HashMap<String, Float>();
+            downstreamRequestMultiplier.put(s1.getName(), innerMap);
+            services.forEach(s2 -> {
+                var downstreamServices = serviceConfigMap.get(s1.getName()).getDownstreamServices();
+                if (downstreamServices == null) {
+                    innerMap.put(s2.getName(), 0F);
+                } else {
+                    var ratio = downstreamServices.getOrDefault(s2.getName(), 0F);
+                    innerMap.put(s2.getName(), ratio);
+                }
+            });
+        });
+    }
 
     private void initDataCenters(DataCenterConfigMap configMap) {
         configMap.forEach((key, config) -> {

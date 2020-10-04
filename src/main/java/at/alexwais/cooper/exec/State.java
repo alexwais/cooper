@@ -10,7 +10,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Getter
 @RequiredArgsConstructor
@@ -18,7 +21,13 @@ public class State {
 
     private final Model model;
 
-    private Map<String, Long> serviceLoad = new HashMap<>();
+    private final Map<String, Long> incomingServiceLoad = new HashMap<>();
+    private final Map<String, Long> downstreamServiceLoad = new HashMap<>();
+    private final Map<String, Long> serviceLoad = new HashMap<>();
+
+    @Setter
+    private SimpleWeightedGraph<String, DefaultWeightedEdge> serviceAffinity;
+//    private final Map<Service, Map<Service, Float>> serviceAffinity;
 
 //    private final Map<String, String> containerVmAllocation = new HashMap<>();
 

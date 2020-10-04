@@ -4,6 +4,7 @@ import at.alexwais.cooper.config.DataCenterConfigMap;
 import at.alexwais.cooper.config.ServiceConfigMap;
 import at.alexwais.cooper.exec.CooperExecution;
 import at.alexwais.cooper.exec.Initializer;
+import at.alexwais.cooper.exec.Model;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -18,13 +19,11 @@ public class CooperApplication implements CommandLineRunner {
 		SpringApplication.run(CooperApplication.class, args);
 	}
 
-
 	@Autowired
 	private DataCenterConfigMap dataCenterConfig;
 	@Autowired
 	private ServiceConfigMap serviceConfig;
 
-	private static final int INSTANCE_COUNT = 2_000;
 
 	@Override
 	public void run(String... args) {
@@ -32,8 +31,8 @@ public class CooperApplication implements CommandLineRunner {
 
 		var initializer = new Initializer(dataCenterConfig, serviceConfig);
 //		initializer.printState();
-
-		var execution = new CooperExecution(initializer.getDataCenters(), initializer.getServices());
+		var model = new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getDownstreamRequestMultiplier());
+		var execution = new CooperExecution(model);
 		execution.run();
 
 
