@@ -9,7 +9,6 @@ import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -136,7 +135,7 @@ public class CooperExecution {
         var greedyFitness = fitnessFunction.eval(greedyResult.getAllocation(), state);
         totalGreedyFitness += greedyFitness;
 
-        var geneticOptimizer = new GeneticAlgorithm(Collections.emptyList(), model, state, validator);
+        var geneticOptimizer = new GeneticAlgorithm(model, state, validator);
         var geneticResult = geneticOptimizer.run();
         var geneticFitness = fitnessFunction.eval(geneticResult.getAllocation(), state);
         totalGeneticFitness += geneticFitness;
