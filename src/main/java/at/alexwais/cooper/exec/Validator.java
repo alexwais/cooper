@@ -1,10 +1,13 @@
 package at.alexwais.cooper.exec;
 
+import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -12,33 +15,33 @@ public class Validator {
 
     private Model model;
 
-    public boolean isAllocationValid(Map<VmInstance, List<ContainerType>> allocation, Map<String, Long> serviceLoad) {
-        return violations(allocation, serviceLoad) == 0;
+    public boolean isAllocationValid(Allocation resourceAllocation, Map<String, Long> serviceLoad) {
+        return violations(resourceAllocation, serviceLoad) == 0;
     }
 
-    public int violations(Map<VmInstance, List<ContainerType>> allocation, Map<String, Long> serviceLoad) {
-        var allocatedContainers = allocation.values().stream()
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-
-        var allocatedContainersByService = new HashMap<String, List<ContainerType>>();
-        allocatedContainers.forEach(c -> {
-            MapUtils.putToMapList(allocatedContainersByService, c.getService().getName(), c);
+    public int violations(Allocation resourceAllocation, Map<String, Long> serviceLoad) {
+        var allocatedContainersByService = new HashMap<Service, List<ContainerType>>();
+        resourceAllocation.getAllocatedContainers().forEach(c -> {
+            MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
         });
 
+        // TODO refactor duplicated code in fitness function - move to allocation as helper
         var capacityPerService = new HashMap<String, Long>();
-        for (Service s : model.getServices().values()) {
-            var rpmCap = allocatedContainersByService.getOrDefault(s.getName(), Collections.emptyList()).stream()
+        for (Map.Entry<Service, List<ContainerType>> allocatedServiceContainers : allocatedContainersByService.entrySet()) {
+            var service = allocatedServiceContainers.getKey();
+            var containers = allocatedServiceContainers.getValue();
+
+            var serviceCapacity = containers.stream()
                     .map(ContainerType::getRpmCapacity)
                     .reduce(0L, Long::sum);
-            capacityPerService.put(s.getName(), rpmCap);
+            capacityPerService.put(service.getName(), serviceCapacity);
         }
 
 
         var violations = 0;
 
         // Validate VMs are not overloaded
-        for (Map.Entry<VmInstance, List<ContainerType>> e : allocation.entrySet()) {
+        for (Map.Entry<VmInstance, List<ContainerType>> e : resourceAllocation.getAllocationMap().entrySet()) {
             var vm = e.getKey();
             var containers = e.getValue();
             var isOverallocated = isVmOverallocated(vm, containers);
@@ -51,7 +54,7 @@ public class Validator {
         for (Map.Entry<String, Long> entry : serviceLoad.entrySet()) {
             var serviceName = entry.getKey();
             var load = entry.getValue();
-            var capacity = capacityPerService.get(serviceName);
+            var capacity = capacityPerService.getOrDefault(serviceName, 0L);
             if (capacity < load) {
                 violations += load - capacity;
                 // violations++;

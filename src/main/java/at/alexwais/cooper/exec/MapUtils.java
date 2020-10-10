@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class MapUtils {
 
-    public static <T> void putToMapList(Map<String, List<T>> map, String key, T item) {
+    public static <K, T> void putToMapList(Map<K, List<T>> map, K key, T item) {
         var listForKey = map.get(key);
         if (listForKey != null) {
             listForKey.add(item);

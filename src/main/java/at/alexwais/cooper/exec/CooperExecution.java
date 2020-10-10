@@ -29,6 +29,11 @@ public class CooperExecution {
     private final Validator validator;
     private final FitnessFunction fitnessFunction;
 
+    private final GeneticAlgorithm geneticOptimizer;
+
+    private List<OptimizationResult> greedyOptimizations = new ArrayList<>();
+    private List<OptimizationResult> geneticOptimizations = new ArrayList<>();
+
     private final long MAX_RUNTIME = 300L;
 
     public CooperExecution(Model model) {
@@ -36,6 +41,8 @@ public class CooperExecution {
         this.state = new State(model);
         this.validator = new Validator(model);
         this.fitnessFunction = new FitnessFunction(model, validator);
+
+        this.geneticOptimizer = new GeneticAlgorithm(model, validator);
     }
 
 
@@ -45,8 +52,31 @@ public class CooperExecution {
     }
 
     private void tearDown() {
+        var totalGeneticCost = geneticOptimizations.stream()
+                .map(o -> o.getAllocation().getTotalCost())
+                .reduce(0f, Float::sum);
+        var totalGreedyCost = greedyOptimizations.stream()
+                .map(o -> o.getAllocation().getTotalCost())
+                .reduce(0f, Float::sum);
+
+        var totalGeneticFitness = geneticOptimizations.stream()
+                .map(OptimizationResult::getFitness)
+                .reduce(0f, Float::sum);
+        var totalGreedyFitness = greedyOptimizations.stream()
+                .map(OptimizationResult::getFitness)
+                .reduce(0f, Float::sum);
+
+        var averageRuntime = geneticOptimizations.stream()
+                .mapToInt(o -> o.getRuntimeInMilliseconds().intValue())
+                .average().getAsDouble();
+
+        log.info(" *** Total Genetic Cost: {}", totalGeneticCost);
+        log.info(" *** Total Greedy Cost: {}", totalGreedyCost);
+        log.info(" ***");
         log.info(" *** Total Genetic Fitness: {}", totalGeneticFitness);
         log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
+        log.info(" ***");
+        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
     }
 
     class SchedulingListener implements Listener {
@@ -123,22 +153,19 @@ public class CooperExecution {
         state.setServiceAffinity(affinityGraph);
 
         state.getServiceLoad().putAll(mergedLoad);
-
     }
 
 
-    private float totalGreedyFitness = 0;
-    private float totalGeneticFitness = 0;
+
 
     private OptimizationResult optimize() {
-        var greedyResult = new GreedyOptimizer(model, state).optimize();
-        var greedyFitness = fitnessFunction.eval(greedyResult.getAllocation(), state);
-        totalGreedyFitness += greedyFitness;
+        var greedyOptimized = new GreedyOptimizer(model, state);
+        var greedyResult = greedyOptimized.optimize();
+        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state));
+        greedyOptimizations.add(greedyResult);
 
-        var geneticOptimizer = new GeneticAlgorithm(model, state, validator);
-        var geneticResult = geneticOptimizer.run();
-        var geneticFitness = fitnessFunction.eval(geneticResult.getAllocation(), state);
-        totalGeneticFitness += geneticFitness;
+        var geneticResult = geneticOptimizer.run(state);
+        geneticOptimizations.add(geneticResult);
 
         var result = geneticResult;
         if (!validator.isAllocationValid(result.getAllocation(), state.getServiceLoad())) {
@@ -147,13 +174,15 @@ public class CooperExecution {
         return result;
     }
 
-    private ExecutionItems plan(OptimizationResult opt) {
+    private ExecutionPlan plan(OptimizationResult optimizationResult) {
         List<String> vmLaunchList = new ArrayList<>();
         List<String> vmKillList = new ArrayList<>();
 
+        var allocatedVms = optimizationResult.getAllocation().getAllocatedVms();
+
         model.getVms().forEach((vmId, vm) -> {
             var isRunning = state.getLeasedProviderVms().containsKey(vmId);
-            var shouldRun = opt.getAllocation().containsKey(vm);
+            var shouldRun = allocatedVms.contains(vm);
 
             if (!isRunning && shouldRun) {
                 vmLaunchList.add(vmId);
@@ -162,43 +191,33 @@ public class CooperExecution {
             }
         });
 
-//        opt.getVmAllocation().forEach((vmId, shouldRun) -> {
-//            var isRunning = state.getLeasedProviderVms().containsKey(vmId);
-//
-//            if (!isRunning && shouldRun) {
-//                vmLaunchList.add(vmId);
-//            } else if (isRunning && !shouldRun) {
-//                vmKillList.add(vmId);
-//            }
-//        });
-
         List<Pair<String, ContainerType>> containerLaunchList = new ArrayList<>();
         List<Pair<String, ContainerType>> containerKillList = new ArrayList<>();
 
-        opt.getTuples().stream()
+        optimizationResult.getAllocation().getTuples().stream()
                 .forEach(a -> {
                     var allocate = a.isAllocate();
                     var containersRunningOnVm = state.getRunningContainersByVm(a.getVm().getId());
-                    var isContainerTypeRunningOnVm = containersRunningOnVm.stream().anyMatch(c -> c.getConfiguration().equals(a.getType()));
+                    var isContainerTypeRunningOnVm = containersRunningOnVm.stream().anyMatch(c -> c.getConfiguration().equals(a.getContainer()));
                     if (allocate && !isContainerTypeRunningOnVm) {
-                        containerLaunchList.add(Pair.of(a.getVm().getId(), a.getType()));
+                        containerLaunchList.add(Pair.of(a.getVm().getId(), a.getContainer()));
                     } else if (!allocate && isContainerTypeRunningOnVm) {
-                        containerKillList.add(Pair.of(a.getVm().getId(), a.getType()));
+                        containerKillList.add(Pair.of(a.getVm().getId(), a.getContainer()));
                     } else {
                         // nothing to do
                     }
                 });
 
-        return new ExecutionItems(vmLaunchList, vmKillList, containerLaunchList, containerKillList);
+        return new ExecutionPlan(vmLaunchList, vmKillList, containerLaunchList, containerKillList);
     }
 
-    private void execute(Scheduler scheduler, ExecutionItems items) {
-        items.getVmsToLaunch().forEach(vmId -> {
+    private void execute(Scheduler scheduler, ExecutionPlan plan) {
+        plan.getVmsToLaunch().forEach(vmId -> {
             var vm = model.getVms().get(vmId);
             var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
             state.getLeasedProviderVms().put(vmId, providerId);
         });
-        items.getContainersToStart().forEach(a -> {
+        plan.getContainersToStart().forEach(a -> {
             var vmId = a.getKey();
             var containerType = a.getValue();
             var providerVmId = state.getLeasedProviderVms().get(vmId);
@@ -209,7 +228,7 @@ public class CooperExecution {
             var providerId = scheduler.launchContainer(1, containerType.getMemory().toMegabytes(), providerVmId);
             state.allocateContainerInstance(vmId, containerType, providerId);
         });
-        items.getContainersToStop().forEach(a -> {
+        plan.getContainersToStop().forEach(a -> {
             var vmId = a.getKey();
             var containerType = a.getValue();
             var runningContainers = state.getRunningContainersByVm(vmId);
@@ -223,7 +242,7 @@ public class CooperExecution {
             state.deallocateContainerInstance(container);
         });
         // TODO delay termination of vms/containers?
-        items.getVmsToTerminate().forEach(vmId -> {
+        plan.getVmsToTerminate().forEach(vmId -> {
             var vm = model.getVms().get(vmId);
             var providerId = state.getLeasedProviderVms().get(vmId);
             scheduler.terminateVm(providerId);

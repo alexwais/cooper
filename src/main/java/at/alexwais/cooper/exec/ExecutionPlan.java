@@ -8,7 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 @Data
 @AllArgsConstructor
-public class ExecutionItems {
+public class ExecutionPlan {
 
     private List<String> vmsToLaunch;
     private List<String> vmsToTerminate;

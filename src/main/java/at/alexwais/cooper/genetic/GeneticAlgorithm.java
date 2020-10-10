@@ -1,7 +1,6 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.exec.Model;
 import at.alexwais.cooper.exec.OptimizationResult;
 import at.alexwais.cooper.exec.State;
@@ -10,29 +9,27 @@ import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
-import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StopWatch;
 
 
 @Slf4j
 public class GeneticAlgorithm {
 
     private final Model model;
-    private final State state;
-    private final Mapping mapping;
+//    private final State state;
+//    private final Mapping mapping;
     // private final Validator validator;
     private final FitnessFunction fitnessFunction;
 
     // private final RetryConstraint<BitGene, Float> constraint;
-    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
+//    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
 
 
-    public GeneticAlgorithm(Model model, State state, Validator validator) {
+    public GeneticAlgorithm(Model model, Validator validator) {
         this.model = model;
-        this.state = state;
 
-        this.mapping = new Mapping(model, state);
+//        this.mapping = new Mapping(model, state);
 //        this.initialPopulation = initialPopulation.stream()
 //                .map(mapping::optimizationResultToGenotype)
 //                .collect(Collectors.toList());
@@ -41,7 +38,6 @@ public class GeneticAlgorithm {
 
 //        flatCodec = Codec.of(mapping.flatGenotypeFactory(), mapping::flatDecoder);
 //        containerRowCodec = Codec.of(mapping.containerRowGenotypeFactory(), mapping::containerRowSquareDecoder);
-        serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
 //        vmRowCodec = Codec.of(mapping.vmRowGenotypeFactory(), mapping::vmRowSquareDecoder);
 
 //        this.constraint = new RetryConstraint<>(
@@ -52,9 +48,15 @@ public class GeneticAlgorithm {
 
     }
 
-    public OptimizationResult run() {
+    public OptimizationResult run(State state) {
+        var stopWatch = new StopWatch();
+        stopWatch.start();
+
+        var mapping = new Mapping(model, state);
+        var serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
+
         Engine<DistributedIntegerGene, Float> engine1 = Engine
-                .builder(g -> fitnessFunction.eval(g, state), serviceRowCodec)
+                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), state), serviceRowCodec)
 //                .constraint(constraint)
                 .minimizing()
                 .populationSize(250)
@@ -81,7 +83,10 @@ public class GeneticAlgorithm {
 
         log.info("Result fitness: {}", phenotype.fitness());
 
-        return new OptimizationResult(model, serviceRowCodec.decode(phenotype.genotype()));
+        var decodedAllocationMapping = serviceRowCodec.decode(phenotype.genotype());
+
+        stopWatch.stop();
+        return new OptimizationResult(model, decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
     }
 
 

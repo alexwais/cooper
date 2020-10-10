@@ -1,43 +1,35 @@
 package at.alexwais.cooper.exec;
 
+import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-@AllArgsConstructor
 @EqualsAndHashCode
 public class OptimizationResult {
 
     private Model model;
 
-    private Map<VmInstance, List<ContainerType>> allocation;
+    private Allocation allocation;
+
+    private Float fitness;
+
+    private Long runtimeInMilliseconds;
 
 
-    public List<OptimizationResult.AllocationTuple> getTuples() {
-        List<OptimizationResult.AllocationTuple> resultTuples = new ArrayList<>();
-        model.getVms().values().forEach(vm -> {
-            model.getContainerTypes().forEach(type -> {
-                var containerList = allocation.getOrDefault(vm, Collections.emptyList());
-                var allocate = containerList.contains(type);
-                var tuple = new OptimizationResult.AllocationTuple(vm, type, allocate);
-                resultTuples.add(tuple);
-            });
-        });
-        return resultTuples;
+    public OptimizationResult(Model model, Map<VmInstance, List<ContainerType>> allocationMapping) {
+        this.model = model;
+        this.allocation = new Allocation(model, allocationMapping);
     }
 
-    @Getter
-    @RequiredArgsConstructor
-    @EqualsAndHashCode
-    public static class AllocationTuple {
-        private final VmInstance vm;
-        private final ContainerType type;
-        private final boolean allocate;
+    public OptimizationResult(Model model, Map<VmInstance, List<ContainerType>> allocationMapping, Float fitness, Long runtimeInMilliseconds) {
+        this(model, allocationMapping);
+        this.fitness = fitness;
+        this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
 }
