@@ -101,7 +101,7 @@ public class Mapping {
     }
 
     private double shareOfServiceLoadToOverallCapacity(Service service) {
-        var overallServiceLoad = state.getServiceLoad().get(service.getName());
+        var overallServiceLoad = state.getTotalServiceLoad().get(service.getName());
         var overallCapacityForService = service.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);

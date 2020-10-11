@@ -15,11 +15,11 @@ public class Validator {
 
     private Model model;
 
-    public boolean isAllocationValid(Allocation resourceAllocation, Map<String, Long> serviceLoad) {
+    public boolean isAllocationValid(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
         return violations(resourceAllocation, serviceLoad) == 0;
     }
 
-    public int violations(Allocation resourceAllocation, Map<String, Long> serviceLoad) {
+    public int violations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
         var allocatedContainersByService = new HashMap<Service, List<ContainerType>>();
         resourceAllocation.getAllocatedContainers().forEach(c -> {
             MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
@@ -51,7 +51,7 @@ public class Validator {
         }
 
         // Validate Services are not underprovisioned
-        for (Map.Entry<String, Long> entry : serviceLoad.entrySet()) {
+        for (Map.Entry<String, Integer> entry : serviceLoad.entrySet()) {
             var serviceName = entry.getKey();
             var load = entry.getValue();
             var capacity = capacityPerService.getOrDefault(serviceName, 0L);

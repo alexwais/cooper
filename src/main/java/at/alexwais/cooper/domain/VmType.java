@@ -15,4 +15,6 @@ public class VmType {
 
     private final Float cost; // USD
 
+    private final DataCenter dataCenter;
+
 }

@@ -13,4 +13,6 @@ public class VmInstance {
 
     private final VmType type;
 
+    private final DataCenter dataCenter;
+
 }

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Getter
@@ -21,9 +22,17 @@ public class State {
 
     private final Model model;
 
-    private final Map<String, Long> incomingServiceLoad = new HashMap<>();
-    private final Map<String, Long> downstreamServiceLoad = new HashMap<>();
-    private final Map<String, Long> serviceLoad = new HashMap<>();
+    // Load measured by Monitor
+    @Setter
+    private Map<String, Integer> externalServiceLoad;
+    @Setter
+    private Map<String, Integer> internalServiceLoad;
+    @Setter
+    private Map<String, Integer> totalServiceLoad;
+    @Setter
+    private Integer totalSystemLoad;
+    @Setter
+    private SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
 
     @Setter
     private SimpleWeightedGraph<String, DefaultWeightedEdge> serviceAffinity;

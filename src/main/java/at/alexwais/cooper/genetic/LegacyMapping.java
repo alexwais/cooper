@@ -201,7 +201,7 @@ public class LegacyMapping {
 
     private double shareOfServiceLoadToOverallCapacity(Service service) {
 
-        var overallServiceLoad = state.getServiceLoad().get(service.getName());
+        var overallServiceLoad = state.getTotalServiceLoad().get(service.getName());
         var overallCapacityForService = service.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);
@@ -215,8 +215,7 @@ public class LegacyMapping {
     }
 
     private double shareOfContainersToVmCapacity() {
-        var overallLoad = state.getServiceLoad().values().stream()
-                .reduce(0L, Long::sum);
+        var overallLoad = state.getTotalSystemLoad();
         var overallCapacity = model.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);

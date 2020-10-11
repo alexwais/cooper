@@ -59,7 +59,7 @@ public class GeneticAlgorithm {
                 .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), state), serviceRowCodec)
 //                .constraint(constraint)
                 .minimizing()
-                .populationSize(250)
+                .populationSize(300)
                 .offspringFraction(0.5)
                 .selector(
                         new EliteSelector<>(1,

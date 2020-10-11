@@ -22,20 +22,36 @@ dataCenters:
         cpuCores: 4
         memory: 16GB
         cost: 0.19
-#  DC-2:
-#    instanceTypes:
-#      - label: 2.medium
-#        cpuCores: 2
-#        memory: 1024
-#        cost: 0.5
-#      - label: 2.large
-#        cpuCores: 2
-#        memory: 1024
-#        cost: 0.5
-#      - label: 4.large
-#        cpuCores: 2
-#        memory: 1024
-#        cost: 0.5
+  DC-2:
+    instanceTypes:
+      - label: 2.small
+        cpuCores: 2
+        memory: 2GB
+        cost: 0.027
+      - label: 2.medium
+        cpuCores: 2
+        memory: 4GB
+        cost: 0.052
+      - label: 4.large
+        cpuCores: 4
+        memory: 8GB
+        cost: 0.1
+      - label: 4.xlarge
+        cpuCores: 4
+        memory: 16GB
+        cost: 0.19
+
+distance:
+  - a: DC-1
+    b: DC-1
+    latency: 30
+  - a: DC-2
+    b: DC-2
+    latency: 50
+  - a: DC-1
+    b: DC-2
+    latency: 100
+
 services:
   service-a:
     downstreamServices:

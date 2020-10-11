@@ -1,6 +1,7 @@
 package at.alexwais.cooper;
 
 import at.alexwais.cooper.config.DataCenterConfigMap;
+import at.alexwais.cooper.config.DataCenterDistanceConfigList;
 import at.alexwais.cooper.config.ServiceConfigMap;
 import at.alexwais.cooper.exec.CooperExecution;
 import at.alexwais.cooper.exec.Initializer;
@@ -22,6 +23,8 @@ public class CooperApplication implements CommandLineRunner {
 	@Autowired
 	private DataCenterConfigMap dataCenterConfig;
 	@Autowired
+	private DataCenterDistanceConfigList distanceConfig;
+	@Autowired
 	private ServiceConfigMap serviceConfig;
 
 
@@ -29,9 +32,9 @@ public class CooperApplication implements CommandLineRunner {
 	public void run(String... args) {
 		log.info("EXECUTING : cooper");
 
-		var initializer = new Initializer(dataCenterConfig, serviceConfig);
+		var initializer = new Initializer(dataCenterConfig, distanceConfig, serviceConfig);
 //		initializer.printState();
-		var model = new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getDownstreamRequestMultiplier());
+		var model = new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getInteractionMultiplication(), initializer.getDataCenterDistanceGraph());
 		var execution = new CooperExecution(model);
 		execution.run();
 

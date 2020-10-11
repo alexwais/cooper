@@ -60,14 +60,14 @@ public class FitnessFunction {
             var serviceCapacity = containers.stream()
                     .map(ContainerType::getRpmCapacity)
                     .reduce(0L, Long::sum);
-            var serviceLoad = state.getServiceLoad().get(service.getName());
+            var serviceLoad = state.getTotalServiceLoad().get(service.getName());
 
             var overProvisionedServiceCapacity = Math.abs(serviceCapacity - serviceLoad);
             overProvisionedCapacity += overProvisionedServiceCapacity;
         }
 
 
-        var violations = validator.violations(resourceAllocation, state.getServiceLoad());
+        var violations = validator.violations(resourceAllocation, state.getTotalServiceLoad());
 
 
         var w_cost = 100;
@@ -89,7 +89,10 @@ public class FitnessFunction {
 
 
     private double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
-        var distance = (vmA == vmB) ? 0 : 100; // TODO use actual instance between VMs
+        if (vmA == vmB) return 0;
+
+        var edge = model.getDataCenterDistanceGraph().getEdge(vmA.getDataCenter().getName(), vmB.getDataCenter().getName());
+        var distance = model.getDataCenterDistanceGraph().getEdgeWeight(edge);
         return distance;
     }
 

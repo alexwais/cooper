@@ -20,7 +20,7 @@ public class GreedyOptimizer {
         this.state = state;
 
         var serviceCapacity = state.getServiceCapacity();
-        state.getServiceLoad().forEach((serviceName, currentLoad)  -> {
+        state.getTotalServiceLoad().forEach((serviceName, currentLoad)  -> {
             var loadCapacity = serviceCapacity.get(serviceName);
             loadDeltaPerService.put(serviceName, currentLoad - loadCapacity);
         });
