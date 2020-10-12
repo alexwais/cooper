@@ -1,6 +1,6 @@
 package at.alexwais.cooper.domain;
 
-import at.alexwais.cooper.exec.Model;
+import at.alexwais.cooper.scheduler.Model;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;

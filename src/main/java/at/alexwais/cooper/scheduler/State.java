@@ -1,7 +1,7 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler;
 
-import static at.alexwais.cooper.exec.MapUtils.putToMapList;
-import static at.alexwais.cooper.exec.MapUtils.removeContainerFromMapList;
+import static at.alexwais.cooper.scheduler.MapUtils.putToMapList;
+import static at.alexwais.cooper.scheduler.MapUtils.removeContainerFromMapList;
 
 import at.alexwais.cooper.domain.ContainerInstance;
 import at.alexwais.cooper.domain.ContainerType;

@@ -1,8 +1,9 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler.dto;
 
 import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.scheduler.Model;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;

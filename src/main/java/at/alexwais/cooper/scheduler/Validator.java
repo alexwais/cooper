@@ -1,4 +1,4 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;

@@ -3,9 +3,9 @@ package at.alexwais.cooper;
 import at.alexwais.cooper.config.DataCenterConfigMap;
 import at.alexwais.cooper.config.DataCenterDistanceConfigList;
 import at.alexwais.cooper.config.ServiceConfigMap;
-import at.alexwais.cooper.exec.CooperExecution;
-import at.alexwais.cooper.exec.Initializer;
-import at.alexwais.cooper.exec.Model;
+import at.alexwais.cooper.scheduler.Initializer;
+import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.SchedulingLoop;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -35,7 +35,7 @@ public class CooperApplication implements CommandLineRunner {
 		var initializer = new Initializer(dataCenterConfig, distanceConfig, serviceConfig);
 //		initializer.printState();
 		var model = new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getInteractionMultiplication(), initializer.getDataCenterDistanceGraph());
-		var execution = new CooperExecution(model);
+		var execution = new SchedulingLoop(model);
 		execution.run();
 
 

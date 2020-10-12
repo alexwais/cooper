@@ -1,10 +1,10 @@
 package at.alexwais.cooper.genetic;
 
 import at.alexwais.cooper.domain.Allocation;
-import at.alexwais.cooper.exec.Model;
-import at.alexwais.cooper.exec.OptimizationResult;
-import at.alexwais.cooper.exec.State;
-import at.alexwais.cooper.exec.Validator;
+import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;

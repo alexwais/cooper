@@ -1,8 +1,9 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.domain.ContainerInstance;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;

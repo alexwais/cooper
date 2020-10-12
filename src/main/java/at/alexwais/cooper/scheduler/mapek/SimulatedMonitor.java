@@ -1,9 +1,10 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler.mapek;
 
+import at.alexwais.cooper.scheduler.Model;
 import java.util.*;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 
@@ -29,14 +30,14 @@ public class SimulatedMonitor {
     }
 
 
-    @AllArgsConstructor
+    @RequiredArgsConstructor
     @Getter
     public class LoadMeasures {
-        private Map<String, Integer> externalServiceLoad;
-        private Map<String, Integer> internalServiceLoad;
-        private Map<String, Integer> totalServiceLoad;
-        private Integer totalSystemLoad;
-        private SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
+        private final Map<String, Integer> externalServiceLoad;
+        private final Map<String, Integer> internalServiceLoad;
+        private final Map<String, Integer> totalServiceLoad;
+        private final Integer totalSystemLoad;
+        private final SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
     }
 
 

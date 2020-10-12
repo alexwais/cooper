@@ -1,38 +1,46 @@
-package at.alexwais.cooper.exec;
+package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.ConsoleTable;
 import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
+import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.mapek.Analyzer;
+import at.alexwais.cooper.scheduler.mapek.Executor;
+import at.alexwais.cooper.scheduler.mapek.Planner;
+import at.alexwais.cooper.scheduler.mapek.SimulatedMonitor;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Slf4j
-public class CooperExecution {
+public class SchedulingLoop {
 
     private final CloudProvider cloudProvider = new CloudSimRunner();
-
-    private final Model model;
-    private final State currentState;
-
     private final Validator validator;
 
+    // MAPE-K (Monitor - Analyze - Plan - Execute)
     private final SimulatedMonitor monitor;
+    private final Analyzer analyzer;
     private final Planner planner;
+    private final Executor executor;
+
+    // Knowledge Base
+    private final Model model;
+    private final State currentState;
 
 
     private final long MAX_RUNTIME = 300L;
 
-    public CooperExecution(Model model) {
+    public SchedulingLoop(Model model) {
         this.model = model;
         this.currentState = new State(model);
         this.validator = new Validator(model);
 
         this.monitor = new SimulatedMonitor(model);
+        this.analyzer = new Analyzer(model);
         this.planner = new Planner(model, validator);
+        this.executor = new Executor(model);
     }
 
 
@@ -78,11 +86,11 @@ public class CooperExecution {
                 scheduler.abort();
             }
 
-            // MAPE-K (Monitor - Analyze(Optimize) - Plan - Execute)
+
             monitor();
             analyze();
             var executionPlan = planner.plan(currentState);
-            execute(scheduler, executionPlan);
+            executor.execute(scheduler, executionPlan, currentState);
 
             printServiceLoad();
             printAllocationStatus();
@@ -109,69 +117,10 @@ public class CooperExecution {
     }
 
     private void analyze() {
-        var affinityGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-        model.getServices().values().forEach(s -> affinityGraph.addVertex(s.getName()));
-        model.getServices().values().forEach(s1 -> {
-            model.getServices().values().forEach(s2 -> {
-                if (!s1.equals(s2)) {
-                    affinityGraph.addEdge(s1.getName(), s2.getName(), new DefaultWeightedEdge());
-
-                    var interactionEdge1 = currentState.getInteractionGraph().getEdge(s1.getName(), s2.getName());
-                    var interactionEdge2 = currentState.getInteractionGraph().getEdge(s2.getName(), s1.getName());
-
-                    var interaction1 = (int) currentState.getInteractionGraph().getEdgeWeight(interactionEdge1);
-                    var interaction2 = (int) currentState.getInteractionGraph().getEdgeWeight(interactionEdge2);
-
-                    var bidirectionalInteraction = interaction1 + interaction2;
-                    var affinity = (double) bidirectionalInteraction / (double) currentState.getTotalSystemLoad();
-
-                    var edge = affinityGraph.getEdge(s1.getName(), s2.getName());
-                    affinityGraph.setEdgeWeight(edge, affinity);
-                }
-            });
-        });
-        currentState.setServiceAffinity(affinityGraph);
+        var analysisResult = analyzer.analyze(currentState);
+        currentState.setServiceAffinity(analysisResult.getAffinityGraph());
     }
 
-    private void execute(Scheduler scheduler, ExecutionPlan plan) {
-        plan.getVmsToLaunch().forEach(vmId -> {
-            var vm = model.getVms().get(vmId);
-            var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
-            currentState.getLeasedProviderVms().put(vmId, providerId);
-        });
-        plan.getContainersToStart().forEach(a -> {
-            var vmId = a.getKey();
-            var containerType = a.getValue();
-            var providerVmId = currentState.getLeasedProviderVms().get(vmId);
-            if (providerVmId == null) {
-                log.info("null");
-            }
-
-            var providerId = scheduler.launchContainer(1, containerType.getMemory().toMegabytes(), providerVmId);
-            currentState.allocateContainerInstance(vmId, containerType, providerId);
-        });
-        plan.getContainersToStop().forEach(a -> {
-            var vmId = a.getKey();
-            var containerType = a.getValue();
-            var runningContainers = currentState.getRunningContainersByVm(vmId);
-            var container = runningContainers.stream()
-                    .filter(c -> c.getConfiguration().equals(containerType))
-                    .findAny()
-                    .orElseThrow();
-
-            var providerContainerId = currentState.getRunningProviderContainers().get(container);
-            scheduler.terminateContainer(providerContainerId);
-            currentState.deallocateContainerInstance(container);
-        });
-        // TODO delay termination of vms/containers?
-        plan.getVmsToTerminate().forEach(vmId -> {
-            var vm = model.getVms().get(vmId);
-            var providerId = currentState.getLeasedProviderVms().get(vmId);
-            scheduler.terminateVm(providerId);
-            currentState.releaseVm(vm.getId());
-        });
-
-    }
 
     private void printServiceLoad() {
         System.out.println();

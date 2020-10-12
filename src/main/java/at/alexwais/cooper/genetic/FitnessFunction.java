@@ -4,10 +4,10 @@ import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
-import at.alexwais.cooper.exec.MapUtils;
-import at.alexwais.cooper.exec.Model;
-import at.alexwais.cooper.exec.State;
-import at.alexwais.cooper.exec.Validator;
+import at.alexwais.cooper.scheduler.MapUtils;
+import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.Validator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +33,22 @@ public class FitnessFunction {
                 .reduce(0f, Float::sum);
 
         // Term 3 - Exploiting Co-Location
-        var distanceLatency = 0f;
+//        var distanceLatency = 0f;
+//        for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
+//            for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
+//                var vmA = allocationInstanceA.getVm();
+//                var vmB = allocationInstanceB.getVm();
+//                var containerA = allocationInstanceA.getContainer();
+//                var containerB = allocationInstanceB.getContainer();
+//
+//                var distance = getDistanceBetween(vmA, vmB);
+//                var affinity = getAffinityBetween(containerA, containerB, state.getServiceAffinity());
+//                distanceLatency += (affinity * distance);
+//            }
+//        }
+
+        // Term 3 - Exploiting Co-Location
+        var distanceBonus = 0f;
         for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
             for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
                 var vmA = allocationInstanceA.getVm();
@@ -43,7 +58,7 @@ public class FitnessFunction {
 
                 var distance = getDistanceBetween(vmA, vmB);
                 var affinity = getAffinityBetween(containerA, containerB, state.getServiceAffinity());
-                distanceLatency += (affinity * distance);
+                distanceBonus -= (affinity / distance);
             }
         }
 
@@ -72,12 +87,12 @@ public class FitnessFunction {
 
         var w_cost = 100;
         var w_gradePeriodWaste = 50;
-        var w_distance = 1;
+        var w_distance = 100;
         var w_overProvisioning = 1;
 
         var term1_cost = totalCost * w_cost;
         var term2_gracePeriodCost = gracePeriodCost * w_gradePeriodWaste;
-        var term3_distance = distanceLatency * w_distance;
+        var term3_distance = distanceBonus * w_distance;
         var term4_overProvisioning = overProvisionedCapacity * w_overProvisioning;
 
         var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning
@@ -89,7 +104,7 @@ public class FitnessFunction {
 
 
     private double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
-        if (vmA == vmB) return 0;
+        if (vmA == vmB) return 1;
 
         var edge = model.getDataCenterDistanceGraph().getEdge(vmA.getDataCenter().getName(), vmB.getDataCenter().getName());
         var distance = model.getDataCenterDistanceGraph().getEdgeWeight(edge);
