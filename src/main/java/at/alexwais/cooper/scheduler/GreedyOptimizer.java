@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class GreedyOptimizer {
+public class GreedyOptimizer implements Optimizer{
 
     private final Model model;
     private final State state;
@@ -30,7 +30,7 @@ public class GreedyOptimizer {
     private  Map<String, List<ContainerType>> vmContainerAllocation;
     private final List<VmInstance> vmsToProvision = new ArrayList<>();
 
-    public OptimizationResult optimize() {
+    public OptimizationResult optimize(State state) {
         vmContainerAllocation = state.getRunningContainersByVm().entrySet().stream()
                 .filter(e -> !e.getValue().isEmpty())
                 .collect(Collectors.toMap(

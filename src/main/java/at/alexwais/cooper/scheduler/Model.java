@@ -1,9 +1,6 @@
 package at.alexwais.cooper.scheduler;
 
-import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.DataCenter;
-import at.alexwais.cooper.domain.Service;
-import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.domain.*;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -16,6 +13,7 @@ import org.jgrapht.graph.WeightedPseudograph;
 public class Model {
 
     private final Map<String, DataCenter> dataCenters;
+    private final List<VmType> vmTypes;
     private final Map<String, VmInstance> vms;
     private final Map<String, Service> services;
     private final List<ContainerType> containerTypes;
@@ -28,6 +26,10 @@ public class Model {
                  WeightedPseudograph<String, DefaultWeightedEdge> dataCenterDistanceGraph) {
         this.dataCenters = dataCenters.stream()
                 .collect(Collectors.toMap(DataCenter::getName, Function.identity()));
+
+        this.vmTypes = dataCenters.stream()
+                .flatMap(dc -> dc.getVmTypes().stream())
+                .collect(Collectors.toList());
 
         this.vms = dataCenters.stream()
                 .flatMap(dc -> dc.getVmInstances().stream())

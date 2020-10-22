@@ -2,6 +2,7 @@ package at.alexwais.cooper.genetic;
 
 import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
@@ -14,7 +15,7 @@ import org.springframework.util.StopWatch;
 
 
 @Slf4j
-public class GeneticAlgorithm {
+public class GeneticAlgorithm implements Optimizer {
 
     private final Model model;
 //    private final State state;
@@ -48,7 +49,7 @@ public class GeneticAlgorithm {
 
     }
 
-    public OptimizationResult run(State state) {
+    public OptimizationResult optimize(State state) {
         var stopWatch = new StopWatch();
         stopWatch.start();
 

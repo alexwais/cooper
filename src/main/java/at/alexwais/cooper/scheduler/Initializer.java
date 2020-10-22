@@ -88,7 +88,7 @@ public class Initializer {
 
 //            var totalInstanceCounter = 1000;
             for (var c : config.getContainerConfigurations()) {
-                var containerConfiguration = new ContainerType(c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
+                var containerConfiguration = new ContainerType(service.getName() + ":" + c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
                 service.getContainerTypes().add(containerConfiguration);
 
 //                var containers = new ArrayList<ContainerInstance>();

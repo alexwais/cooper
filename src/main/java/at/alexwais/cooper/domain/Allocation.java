@@ -1,26 +1,42 @@
 package at.alexwais.cooper.domain;
 
+import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 
-@RequiredArgsConstructor
 public class Allocation {
 
-    @NonNull
-    private Model model;
-    @NonNull
-    private Map<VmInstance, List<ContainerType>> vmContainerMapping;
+    private final Model model;
+    private final Map<VmInstance, List<ContainerType>> vmContainerMapping;
 
+    public Allocation(Model model, Map<VmInstance, List<ContainerType>> vmContainerMapping) {
+        this.model = model;
+        this.vmContainerMapping = vmContainerMapping;
+    }
 
+    public Allocation(Model model, List<AllocationTuple> allocationTuples) {
+        this.model = model;
+
+        this.vmContainerMapping = new HashMap<>();
+        allocationTuples.stream()
+                .filter(AllocationTuple::isAllocate)
+                .forEach(a -> {
+                    MapUtils.putToMapList(vmContainerMapping, a.getVm(), a.getContainer());
+                });
+    }
 
     public Map<VmInstance, List<ContainerType>> getAllocationMap() {
         return vmContainerMapping;
+    }
+
+    public boolean isAllocated(ContainerType containerType, VmInstance vm) {
+        var containersOnVm = vmContainerMapping.getOrDefault(vm, new ArrayList<>());
+        return containersOnVm.contains(containerType);
     }
 
     public List<VmInstance> getAllocatedVms() {

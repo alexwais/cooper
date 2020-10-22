@@ -5,11 +5,13 @@ import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
+import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
 import at.alexwais.cooper.scheduler.mapek.SimulatedMonitor;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,6 +37,7 @@ public class SchedulingLoop {
     public SchedulingLoop(Model model) {
         this.model = model;
         this.currentState = new State(model);
+        this.currentState.setCurrentTargetAllocation(new Allocation(model, new HashMap<>()));
         this.validator = new Validator(model);
 
         this.monitor = new SimulatedMonitor(model);
@@ -64,9 +67,9 @@ public class SchedulingLoop {
                 .map(OptimizationResult::getFitness)
                 .reduce(0f, Float::sum);
 
-        var averageRuntime = planner.getGeneticOptimizations().stream()
-                .mapToInt(o -> o.getRuntimeInMilliseconds().intValue())
-                .average().getAsDouble();
+//        var averageRuntime = planner.getGeneticOptimizations().stream()
+//                .mapToInt(o -> o.getRuntimeInMilliseconds().intValue())
+//                .average().getAsDouble();
 
         log.info(" *** Total Genetic Cost: {}", totalGeneticCost);
         log.info(" *** Total Greedy Cost: {}", totalGreedyCost);
@@ -74,7 +77,7 @@ public class SchedulingLoop {
         log.info(" *** Total Genetic Fitness: {}", totalGeneticFitness);
         log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
         log.info(" ***");
-        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
+//        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
     }
 
     class SchedulingListener implements Listener {
@@ -91,6 +94,7 @@ public class SchedulingLoop {
             analyze();
             var executionPlan = planner.plan(currentState);
             executor.execute(scheduler, executionPlan, currentState);
+            currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
 
             printServiceLoad();
             printAllocationStatus();
@@ -139,7 +143,7 @@ public class SchedulingLoop {
         var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "Containers");
         currentState.getLeasedVms().forEach(vm -> {
             var containerList = currentState.getRunningContainersByVm().get(vm.getId());
-            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getService().getName() + ":" + c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
+            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
             var capacity = currentState.getFreeCapacity(vm.getId());
             table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), allocatedContainerTypes);
         });

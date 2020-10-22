@@ -3,9 +3,7 @@ package at.alexwais.cooper.scheduler;
 import static at.alexwais.cooper.scheduler.MapUtils.putToMapList;
 import static at.alexwais.cooper.scheduler.MapUtils.removeContainerFromMapList;
 
-import at.alexwais.cooper.domain.ContainerInstance;
-import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.domain.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -21,6 +19,9 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 public class State {
 
     private final Model model;
+
+    @Setter
+    private Allocation currentTargetAllocation;
 
     // Load measured by Monitor
     @Setter
@@ -95,12 +96,26 @@ public class State {
         return Pair.of(freeCpuCapacity, freeMemoryCapacity);
     }
 
+    public double getAffinityBetween(Service serviceA,
+                                     Service serviceB) {
+        var isSameService = serviceA.equals(serviceB);
+        if (isSameService) {
+            // No affinity between same service possible, graph contains no loops
+            return 0;
+        }
+        var edge = serviceAffinity.getEdge(serviceA.getName(), serviceB.getName());
+        var affinity = serviceAffinity.getEdgeWeight(edge);
+        return affinity;
+    }
+
+
     public void allocateContainerInstance(String vmId, ContainerType type, long providerId) {
         var vm = model.getVms().get(vmId);
         var isDuplicate = getRunningContainersByVm(vm.getId()).stream()
                 .anyMatch(c -> c.getConfiguration().equals(type));
 
-        if (isDuplicate) throw new IllegalStateException("Container of type " + type.getLabel() + " already allocated on VM " + vmId);
+        if (isDuplicate)
+            throw new IllegalStateException("Container of type " + type.getLabel() + " already allocated on VM " + vmId);
 
         var container = new ContainerInstance(type, type.getService(), vm);
 

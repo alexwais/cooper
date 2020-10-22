@@ -3,6 +3,7 @@ package at.alexwais.cooper.scheduler.mapek;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
+import at.alexwais.cooper.ilp.IlpOptimizer;
 import at.alexwais.cooper.scheduler.GreedyOptimizer;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
@@ -20,6 +21,7 @@ public class Planner {
     private final Validator validator;
     private final FitnessFunction fitnessFunction;
     private final GeneticAlgorithm geneticOptimizer;
+    private final IlpOptimizer ilpOptimizer;
 
     @Getter
     private final List<OptimizationResult> greedyOptimizations = new ArrayList<>();
@@ -31,31 +33,35 @@ public class Planner {
         this.validator = validator;
         this.fitnessFunction = new FitnessFunction(model, validator);
         this.geneticOptimizer = new GeneticAlgorithm(model, validator);
+        this.ilpOptimizer = new IlpOptimizer(model);
     }
 
     public ExecutionPlan plan(State state) {
-        var greedyOptimized = new GreedyOptimizer(model, state);
-        var greedyResult = greedyOptimized.optimize();
+        var greedyOptimizer = new GreedyOptimizer(model, state);
+        var greedyResult = greedyOptimizer.optimize(state);
         greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state));
+
+//        var geneticResult = geneticOptimizer.optimize(state);
+
+        var ilpResult = ilpOptimizer.optimize(state);
+        ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), state));
+
         greedyOptimizations.add(greedyResult);
+        geneticOptimizations.add(ilpResult);
 
-        var geneticResult = geneticOptimizer.run(state);
-        geneticOptimizations.add(geneticResult);
-
-        var optimizationResult = geneticResult;
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getTotalServiceLoad())) {
-            throw new IllegalStateException("Invalid allocation!");
-        }
+        var optimizationResult = ilpResult;
+//        var optimizationResult = geneticResult;
+//        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getTotalServiceLoad())) {
+//            throw new IllegalStateException("Invalid allocation!");
+//        }
 
 
         List<String> vmLaunchList = new ArrayList<>();
         List<String> vmKillList = new ArrayList<>();
 
-        var allocatedVms = optimizationResult.getAllocation().getAllocatedVms();
-
         model.getVms().forEach((vmId, vm) -> {
             var isRunning = state.getLeasedProviderVms().containsKey(vmId);
-            var shouldRun = allocatedVms.contains(vm);
+            var shouldRun = optimizationResult.getAllocation().getAllocatedVms().contains(vm);
 
             if (!isRunning && shouldRun) {
                 vmLaunchList.add(vmId);
@@ -81,7 +87,7 @@ public class Planner {
                     }
                 });
 
-        return new ExecutionPlan(vmLaunchList, vmKillList, containerLaunchList, containerKillList);
+        return new ExecutionPlan(optimizationResult.getAllocation(), vmLaunchList, vmKillList, containerLaunchList, containerKillList);
     }
 
 }

@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.SimpleWeightedGraph;
 
 @RequiredArgsConstructor
 public class FitnessFunction {
@@ -57,7 +55,7 @@ public class FitnessFunction {
                 var containerB = allocationInstanceB.getContainer();
 
                 var distance = getDistanceBetween(vmA, vmB);
-                var affinity = getAffinityBetween(containerA, containerB, state.getServiceAffinity());
+                var affinity = state.getAffinityBetween(containerA.getService(), containerB.getService());
                 distanceBonus -= (affinity / distance);
             }
         }
@@ -112,17 +110,6 @@ public class FitnessFunction {
     }
 
 
-    private double getAffinityBetween(ContainerType containerA,
-                                      ContainerType containerB,
-                                      SimpleWeightedGraph<String, DefaultWeightedEdge> serviceAffinityGraph) {
-        var isSameService = containerA.getService().equals(containerB.getService());
-        if (isSameService) {
-            // No affinity between same service possible, graph contains no loops
-            return 0;
-        }
-        var edge = serviceAffinityGraph.getEdge(containerA.getService().getName(), containerB.getService().getName());
-        var affinity = serviceAffinityGraph.getEdgeWeight(edge);
-        return affinity;
-    }
+
 
 }

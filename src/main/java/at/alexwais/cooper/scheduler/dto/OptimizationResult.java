@@ -27,6 +27,11 @@ public class OptimizationResult {
         this.allocation = new Allocation(model, allocationMapping);
     }
 
+    public OptimizationResult(Model model, List<Allocation.AllocationTuple> allocationTuples) {
+        this.model = model;
+        this.allocation = new Allocation(model, allocationTuples);
+    }
+
     public OptimizationResult(Model model, Map<VmInstance, List<ContainerType>> allocationMapping, Float fitness, Long runtimeInMilliseconds) {
         this(model, allocationMapping);
         this.fitness = fitness;
