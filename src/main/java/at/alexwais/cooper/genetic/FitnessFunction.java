@@ -3,7 +3,6 @@ package at.alexwais.cooper.genetic;
 import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
-import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
@@ -54,7 +53,7 @@ public class FitnessFunction {
                 var containerA = allocationInstanceA.getContainer();
                 var containerB = allocationInstanceB.getContainer();
 
-                var distance = getDistanceBetween(vmA, vmB);
+                var distance = model.getDistanceBetween(vmA, vmB);
                 var affinity = state.getAffinityBetween(containerA.getService(), containerB.getService());
                 distanceBonus -= (affinity / distance);
             }
@@ -99,17 +98,5 @@ public class FitnessFunction {
 //        var fitness = totalCost * 100 - affinityBonus * 100 + overProvisionedCapacity + violations * 10_000_000f; // - containersOnSameVm * 100;
         return fitness;
     }
-
-
-    private double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
-        if (vmA == vmB) return 1;
-
-        var edge = model.getDataCenterDistanceGraph().getEdge(vmA.getDataCenter().getName(), vmB.getDataCenter().getName());
-        var distance = model.getDataCenterDistanceGraph().getEdgeWeight(edge);
-        return distance;
-    }
-
-
-
 
 }

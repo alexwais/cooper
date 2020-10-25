@@ -47,4 +47,12 @@ public class Model {
         this.dataCenterDistanceGraph = dataCenterDistanceGraph;
     }
 
+    public double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
+        if (vmA == vmB) return 0;
+
+        var edge = dataCenterDistanceGraph.getEdge(vmA.getDataCenter().getName(), vmB.getDataCenter().getName());
+        var distance = dataCenterDistanceGraph.getEdgeWeight(edge);
+        return distance;
+    }
+
 }

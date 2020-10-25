@@ -17,6 +17,7 @@ public class Initializer {
 
     private static final int INSTANCE_COUNT = 20;
 
+
     @Getter
     private List<DataCenter> dataCenters = new ArrayList<>();
     @Getter
