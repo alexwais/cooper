@@ -11,8 +11,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
+@Slf4j
 public class FitnessFunction {
 
     private final Model model;
@@ -54,8 +56,10 @@ public class FitnessFunction {
                 var containerB = allocationInstanceB.getContainer();
 
                 var distance = model.getDistanceBetween(vmA, vmB);
-                var affinity = state.getAffinityBetween(containerA.getService(), containerB.getService());
-                distanceBonus -= (affinity / distance);
+                if (distance > 0) { // prevent division by zero
+                    var affinity = state.getAffinityBetween(containerA.getService(), containerB.getService());
+                    distanceBonus -= (affinity / distance);
+                }
             }
         }
 
@@ -80,7 +84,6 @@ public class FitnessFunction {
 
 
         var violations = validator.violations(resourceAllocation, state.getTotalServiceLoad());
-
 
         var w_cost = 100;
         var w_gradePeriodWaste = 50;

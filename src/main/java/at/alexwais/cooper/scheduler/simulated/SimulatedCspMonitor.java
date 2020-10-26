@@ -1,53 +1,47 @@
-package at.alexwais.cooper.scheduler.mapek;
+package at.alexwais.cooper.scheduler.simulated;
 
 import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.dto.LoadMeasures;
+import at.alexwais.cooper.scheduler.mapek.Monitor;
 import java.util.*;
 import java.util.stream.Collectors;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleDirectedWeightedGraph;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 
-public class SimulatedMonitor {
+@Slf4j
+@Service
+public class SimulatedCspMonitor implements Monitor {
 
-    private Model model;
-    private Deque<List<Integer>> externalLoadFixture = new ArrayDeque<>();
+    private final Model model;
+    private final Deque<LoadRecord> loadFixture = new ArrayDeque<>();
 
-    public SimulatedMonitor(Model model) {
+    private LoadRecord latestRecord;
+
+    @Autowired
+    public SimulatedCspMonitor(Model model, @Value("${loadFixture}") String loadFixtureFilename) {
         this.model = model;
+        var loader = new CsvLoader(model);
+        var loadRecords = loader.load(loadFixtureFilename);
 
-        externalLoadFixture.add(List.of(25000, 6000));
-        externalLoadFixture.add(List.of(25000, 6000));
-        externalLoadFixture.add(List.of(25000, 8000));
-        externalLoadFixture.add(List.of(25000, 8000));
-        externalLoadFixture.add(List.of(25000, 12000));
-        externalLoadFixture.add(List.of(25000, 12000));
-        externalLoadFixture.add(List.of(25000, 60000));
-        externalLoadFixture.add(List.of(25000, 60000));
-        externalLoadFixture.add(List.of(1000, 8000));
-        externalLoadFixture.add(List.of(1000, 8000));
+        var sorted = loadRecords.stream()
+                .sorted(Comparator.comparingInt(LoadRecord::getSecondsElapsed))
+                .collect(Collectors.toList());
+        loadFixture.addAll(sorted);
     }
 
 
-    @RequiredArgsConstructor
-    @Getter
-    public class LoadMeasures {
-        private final Map<String, Integer> externalServiceLoad;
-        private final Map<String, Integer> internalServiceLoad;
-        private final Map<String, Integer> totalServiceLoad;
-        private final Integer totalSystemLoad;
-        private final SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
-    }
+    @Override
+    public LoadMeasures getCurrentLoad(int elapsedSeconds) {
+        while (elapsedSeconds >= loadFixture.peek().getSecondsElapsed()) {
+            latestRecord = loadFixture.pop();
+        }
 
-
-    public LoadMeasures getCurrentLoad() {
-        var currentFixture = externalLoadFixture.pop();
-
-        var externalServiceLoad = Map.of(
-                "service-a", currentFixture.get(0),
-                "service-b", currentFixture.get(1)
-        );
+        var externalServiceLoad = latestRecord.getExternalServiceLoad();
 
         var interactionGraph = computeInteractionGraph(externalServiceLoad);
 

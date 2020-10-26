@@ -9,20 +9,24 @@ import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
+import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
-import at.alexwais.cooper.scheduler.mapek.SimulatedMonitor;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
 public class SchedulingLoop {
 
     private final CloudProvider cloudProvider = new CloudSimRunner();
     private final Validator validator;
 
     // MAPE-K (Monitor - Analyze - Plan - Execute)
-    private final SimulatedMonitor monitor;
+    @Autowired
+    private Monitor monitor;
     private final Analyzer analyzer;
     private final Planner planner;
     private final Executor executor;
@@ -31,16 +35,20 @@ public class SchedulingLoop {
     private final Model model;
     private final State currentState;
 
-
+    private long currentClock = 0L;
     private final long MAX_RUNTIME = 300L;
 
+
+
+
+    @Autowired
     public SchedulingLoop(Model model) {
         this.model = model;
         this.currentState = new State(model);
         this.currentState.setCurrentTargetAllocation(new Allocation(model, new HashMap<>()));
         this.validator = new Validator(model);
 
-        this.monitor = new SimulatedMonitor(model);
+//        this.monitor = new SimulatedCspMonitor(model, "basic.csv");
         this.analyzer = new Analyzer(model);
         this.planner = new Planner(model, validator);
         this.executor = new Executor(model);
@@ -85,6 +93,8 @@ public class SchedulingLoop {
         public void cycleElapsed(long clock, Scheduler scheduler) {
             log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
 
+            currentClock = clock;
+
             if (clock >= MAX_RUNTIME) {
                 scheduler.abort();
             }
@@ -111,7 +121,7 @@ public class SchedulingLoop {
     }
 
     private void monitor() {
-        var measuredLoad = monitor.getCurrentLoad();
+        var measuredLoad = monitor.getCurrentLoad((int) currentClock);
 
         currentState.setExternalServiceLoad(measuredLoad.getExternalServiceLoad());
         currentState.setInternalServiceLoad(measuredLoad.getInternalServiceLoad());

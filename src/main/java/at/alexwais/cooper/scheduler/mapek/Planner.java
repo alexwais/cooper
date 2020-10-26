@@ -41,19 +41,19 @@ public class Planner {
         var greedyResult = greedyOptimizer.optimize(state);
         greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state));
 
-//        var geneticResult = geneticOptimizer.optimize(state);
+        var geneticResult = geneticOptimizer.optimize(state);
 
-        var ilpResult = ilpOptimizer.optimize(state);
-        ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), state));
+//        var ilpResult = ilpOptimizer.optimize(state);
+//        ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), state));
 
         greedyOptimizations.add(greedyResult);
-        geneticOptimizations.add(ilpResult);
+        geneticOptimizations.add(geneticResult);
 
-        var optimizationResult = ilpResult;
-//        var optimizationResult = geneticResult;
-//        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getTotalServiceLoad())) {
-//            throw new IllegalStateException("Invalid allocation!");
-//        }
+//        var optimizationResult = ilpResult;
+        var optimizationResult = geneticResult;
+        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getTotalServiceLoad())) {
+            throw new IllegalStateException("Invalid allocation!");
+        }
 
 
         List<String> vmLaunchList = new ArrayList<>();

@@ -8,9 +8,11 @@ import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.SchedulingLoop;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
 @Slf4j
 @SpringBootApplication
@@ -27,27 +29,24 @@ public class CooperApplication implements CommandLineRunner {
 	@Autowired
 	private ServiceConfigMap serviceConfig;
 
+	@Autowired
+	private SchedulingLoop scheduler;
+	@Value("${scenario}")
+	private String scenario;
+
 
 	@Override
 	public void run(String... args) {
-		log.info("EXECUTING : cooper");
+		log.info("");
+		log.info("EXECUTING COOPER with scenario: {}", scenario);
 
-		var initializer = new Initializer(dataCenterConfig, distanceConfig, serviceConfig);
-//		initializer.printState();
-		var model = new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getInteractionMultiplication(), initializer.getDataCenterDistanceGraph());
-		var execution = new SchedulingLoop(model);
-		execution.run();
-
-
-//		var cloudSimProvider = new CloudSimRunner();
-//		cloudSimProvider.registerListener(new SampleListener(cloudSimProvider));
-//		cloudSimProvider.run();
-
-//		SimPlus.run();
+		scheduler.run();
 	}
 
-
-
-
+	@Bean
+	public Model model() {
+		var initializer = new Initializer(dataCenterConfig, distanceConfig, serviceConfig);
+		return new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getInteractionMultiplication(), initializer.getDataCenterDistanceGraph());
+	}
 
 }
