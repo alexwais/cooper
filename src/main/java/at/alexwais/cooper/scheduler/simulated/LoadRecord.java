@@ -8,6 +8,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Getter
 public class LoadRecord {
-    private final int secondsElapsed;
+    private final int minutes;
     private final Map<String, Integer> externalServiceLoad = new HashMap<>();
 }

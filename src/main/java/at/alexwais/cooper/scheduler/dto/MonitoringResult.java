@@ -8,7 +8,7 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 
 @RequiredArgsConstructor
 @Getter
-public class LoadMeasures {
+public class MonitoringResult {
     private final Map<String, Integer> externalServiceLoad;
     private final Map<String, Integer> internalServiceLoad;
     private final Map<String, Integer> totalServiceLoad;

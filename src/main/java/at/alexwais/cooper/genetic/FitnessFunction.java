@@ -1,12 +1,12 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +57,7 @@ public class FitnessFunction {
 
                 var distance = model.getDistanceBetween(vmA, vmB);
                 if (distance > 0) { // prevent division by zero
-                    var affinity = state.getAffinityBetween(containerA.getService(), containerB.getService());
+                    var affinity = state.getCurrentMeasures().getAffinityBetween(containerA.getService(), containerB.getService());
                     distanceBonus -= (affinity / distance);
                 }
             }
@@ -76,14 +76,14 @@ public class FitnessFunction {
             var serviceCapacity = containers.stream()
                     .map(ContainerType::getRpmCapacity)
                     .reduce(0L, Long::sum);
-            var serviceLoad = state.getTotalServiceLoad().get(service.getName());
+            var serviceLoad = state.getCurrentMeasures().getTotalServiceLoad().get(service.getName());
 
             var overProvisionedServiceCapacity = Math.abs(serviceCapacity - serviceLoad);
             overProvisionedCapacity += overProvisionedServiceCapacity;
         }
 
 
-        var violations = validator.violations(resourceAllocation, state.getTotalServiceLoad());
+        var violations = validator.violations(resourceAllocation, state.getCurrentMeasures().getTotalServiceLoad());
 
         var w_cost = 100;
         var w_gradePeriodWaste = 50;

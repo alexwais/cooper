@@ -5,7 +5,7 @@ import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
-import at.alexwais.cooper.domain.Allocation;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
@@ -35,10 +35,11 @@ public class SchedulingLoop {
     private final Model model;
     private final State currentState;
 
-    private long currentClock = 0L;
-    private final long MAX_RUNTIME = 300L;
+    private long currentClock = 0L; // seconds
+    private long gracePeriodUntil = 0;
 
-
+    private static final long MAX_RUNTIME = 300L; // seconds
+    private static final long GRACE_PERIOD = 120L; // seconds
 
 
     @Autowired
@@ -46,9 +47,9 @@ public class SchedulingLoop {
         this.model = model;
         this.currentState = new State(model);
         this.currentState.setCurrentTargetAllocation(new Allocation(model, new HashMap<>()));
+
         this.validator = new Validator(model);
 
-//        this.monitor = new SimulatedCspMonitor(model, "basic.csv");
         this.analyzer = new Analyzer(model);
         this.planner = new Planner(model, validator);
         this.executor = new Executor(model);
@@ -91,9 +92,17 @@ public class SchedulingLoop {
     class SchedulingListener implements Listener {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
-            log.info("\n\n########### Cooper Scheduling Cycle ########### {} ", clock);
-
             currentClock = clock;
+            if (currentState.isInGracePeriod() && currentClock >= gracePeriodUntil) {
+                currentState.setInGracePeriod(false);
+            }
+
+            if (currentState.isInGracePeriod()) {
+                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s (GRACE PERIOD) ", currentClock);
+            } else {
+                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s ", currentClock);
+            }
+
 
             if (clock >= MAX_RUNTIME) {
                 scheduler.abort();
@@ -102,9 +111,20 @@ public class SchedulingLoop {
 
             monitor();
             analyze();
+
             var executionPlan = planner.plan(currentState);
-            executor.execute(scheduler, executionPlan, currentState);
-            currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
+
+            if (executionPlan.isReallocation()) {
+                executor.execute(scheduler, executionPlan, currentState);
+                currentState.setCurrentTargetAllocation(executionPlan.getOptimizationResult().getAllocation());
+                currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
+
+                currentState.setInGracePeriod(true);
+                gracePeriodUntil = currentClock + GRACE_PERIOD;
+            } else {
+                log.info("No reallocation performed!");
+            }
+
 
             printServiceLoad();
             printAllocationStatus();
@@ -122,17 +142,12 @@ public class SchedulingLoop {
 
     private void monitor() {
         var measuredLoad = monitor.getCurrentLoad((int) currentClock);
-
-        currentState.setExternalServiceLoad(measuredLoad.getExternalServiceLoad());
-        currentState.setInternalServiceLoad(measuredLoad.getInternalServiceLoad());
-        currentState.setTotalServiceLoad(measuredLoad.getTotalServiceLoad());
-        currentState.setTotalSystemLoad(measuredLoad.getTotalSystemLoad());
-        currentState.setInteractionGraph(measuredLoad.getInteractionGraph());
+        currentState.setCurrentMeasures(new ActivityMeasures(model, measuredLoad));
     }
 
     private void analyze() {
         var analysisResult = analyzer.analyze(currentState);
-        currentState.setServiceAffinity(analysisResult.getAffinityGraph());
+        currentState.setCurrentAnalysisResult(analysisResult);
     }
 
 
@@ -142,7 +157,7 @@ public class SchedulingLoop {
         System.out.println();
         var serviceCapacity = currentState.getServiceCapacity();
         var table = new ConsoleTable("Service", "Load", "Capacity");
-        currentState.getTotalServiceLoad().forEach((key, value) -> table.addRow(key, value, serviceCapacity.get(key)));
+        currentState.getCurrentMeasures().getTotalServiceLoad().forEach((key, value) -> table.addRow(key, value, serviceCapacity.get(key)));
         table.print();
     }
 

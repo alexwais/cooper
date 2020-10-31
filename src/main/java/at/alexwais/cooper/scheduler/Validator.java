@@ -1,11 +1,9 @@
 package at.alexwais.cooper.scheduler;
 
-import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -20,24 +18,6 @@ public class Validator {
     }
 
     public int violations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
-        var allocatedContainersByService = new HashMap<Service, List<ContainerType>>();
-        resourceAllocation.getAllocatedContainers().forEach(c -> {
-            MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
-        });
-
-        // TODO refactor duplicated code in fitness function - move to allocation as helper
-        var capacityPerService = new HashMap<String, Long>();
-        for (Map.Entry<Service, List<ContainerType>> allocatedServiceContainers : allocatedContainersByService.entrySet()) {
-            var service = allocatedServiceContainers.getKey();
-            var containers = allocatedServiceContainers.getValue();
-
-            var serviceCapacity = containers.stream()
-                    .map(ContainerType::getRpmCapacity)
-                    .reduce(0L, Long::sum);
-            capacityPerService.put(service.getName(), serviceCapacity);
-        }
-
-
         var violations = 0;
 
         // Validate VMs are not overloaded
@@ -54,7 +34,7 @@ public class Validator {
         for (Map.Entry<String, Integer> entry : serviceLoad.entrySet()) {
             var serviceName = entry.getKey();
             var load = entry.getValue();
-            var capacity = capacityPerService.getOrDefault(serviceName, 0L);
+            var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
             if (capacity < load) {
                 violations += load - capacity;
                 // violations++;

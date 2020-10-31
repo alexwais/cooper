@@ -21,7 +21,7 @@ public class GreedyOptimizer implements Optimizer{
         this.state = state;
 
         var serviceCapacity = state.getServiceCapacity();
-        state.getTotalServiceLoad().forEach((serviceName, currentLoad)  -> {
+        state.getCurrentMeasures().getTotalServiceLoad().forEach((serviceName, currentLoad)  -> {
             var loadCapacity = serviceCapacity.get(serviceName);
             loadDeltaPerService.put(serviceName, currentLoad - loadCapacity);
         });
@@ -97,7 +97,7 @@ public class GreedyOptimizer implements Optimizer{
         var alloc = vmContainerAllocation.entrySet().stream()
                 .collect(Collectors.toMap(e -> model.getVms().get(e.getKey()), Map.Entry::getValue));
 
-        return new OptimizationResult(model, alloc);
+        return new OptimizationResult(model, state.getCurrentMeasures(), alloc);
     }
 
 

@@ -1,10 +1,10 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.Allocation;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
@@ -87,7 +87,7 @@ public class GeneticAlgorithm implements Optimizer {
         var decodedAllocationMapping = serviceRowCodec.decode(phenotype.genotype());
 
         stopWatch.stop();
-        return new OptimizationResult(model, decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
+        return new OptimizationResult(model, state.getCurrentMeasures(), decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
     }
 
 

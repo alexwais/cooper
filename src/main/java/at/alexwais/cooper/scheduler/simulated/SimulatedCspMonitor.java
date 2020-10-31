@@ -1,7 +1,7 @@
 package at.alexwais.cooper.scheduler.simulated;
 
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.dto.LoadMeasures;
+import at.alexwais.cooper.scheduler.dto.MonitoringResult;
 import at.alexwais.cooper.scheduler.mapek.Monitor;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,15 +29,16 @@ public class SimulatedCspMonitor implements Monitor {
         var loadRecords = loader.load(loadFixtureFilename);
 
         var sorted = loadRecords.stream()
-                .sorted(Comparator.comparingInt(LoadRecord::getSecondsElapsed))
+                .sorted(Comparator.comparingInt(LoadRecord::getMinutes))
                 .collect(Collectors.toList());
         loadFixture.addAll(sorted);
     }
 
 
     @Override
-    public LoadMeasures getCurrentLoad(int elapsedSeconds) {
-        while (elapsedSeconds >= loadFixture.peek().getSecondsElapsed()) {
+    public MonitoringResult getCurrentLoad(int elapsedSeconds) {
+        var elapsedMinutes = elapsedSeconds / 60;
+        while (elapsedMinutes >= loadFixture.peek().getMinutes()) {
             latestRecord = loadFixture.pop();
         }
 
@@ -52,7 +53,7 @@ public class SimulatedCspMonitor implements Monitor {
 
         var totalSystemLoad = totalServiceLoad.values().stream().mapToInt(i -> i).sum();
 
-        return new LoadMeasures(externalServiceLoad, internalServiceLoad, totalServiceLoad, totalSystemLoad, interactionGraph);
+        return new MonitoringResult(externalServiceLoad, internalServiceLoad, totalServiceLoad, totalSystemLoad, interactionGraph);
     }
 
 

@@ -8,13 +8,17 @@ import at.alexwais.cooper.scheduler.GreedyOptimizer;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 
+
+@Slf4j
 public class Planner {
 
     private final Model model;
@@ -37,6 +41,12 @@ public class Planner {
     }
 
     public ExecutionPlan plan(State state) {
+        if (!state.getCurrentAnalysisResult().isCurrentAllocationUnderprovisioned()) {
+            log.info("NOT UNDERPROVISIONED. No optimization triggered.");
+            return noOpExecution(state.getCurrentTargetAllocation());
+        }
+
+
         var greedyOptimizer = new GreedyOptimizer(model, state);
         var greedyResult = greedyOptimizer.optimize(state);
         greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state));
@@ -51,10 +61,9 @@ public class Planner {
 
 //        var optimizationResult = ilpResult;
         var optimizationResult = geneticResult;
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getTotalServiceLoad())) {
+        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getCurrentMeasures().getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }
-
 
         List<String> vmLaunchList = new ArrayList<>();
         List<String> vmKillList = new ArrayList<>();
@@ -87,7 +96,11 @@ public class Planner {
                     }
                 });
 
-        return new ExecutionPlan(optimizationResult.getAllocation(), vmLaunchList, vmKillList, containerLaunchList, containerKillList);
+        return new ExecutionPlan(optimizationResult, vmLaunchList, vmKillList, containerLaunchList, containerKillList);
+    }
+
+    private ExecutionPlan noOpExecution(Allocation currentTargetAllocation) {
+        return new ExecutionPlan(false);
     }
 
 }

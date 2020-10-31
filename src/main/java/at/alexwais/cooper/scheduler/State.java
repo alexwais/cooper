@@ -3,16 +3,18 @@ package at.alexwais.cooper.scheduler;
 import static at.alexwais.cooper.scheduler.MapUtils.putToMapList;
 import static at.alexwais.cooper.scheduler.MapUtils.removeContainerFromMapList;
 
-import at.alexwais.cooper.domain.*;
+import at.alexwais.cooper.domain.ContainerInstance;
+import at.alexwais.cooper.domain.ContainerType;
+import at.alexwais.cooper.domain.VmInstance;
+import at.alexwais.cooper.scheduler.dto.Allocation;
+import at.alexwais.cooper.scheduler.dto.AnalysisResult;
+import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.SimpleDirectedWeightedGraph;
-import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Getter
 @RequiredArgsConstructor
@@ -21,25 +23,20 @@ public class State {
     private final Model model;
 
     @Setter
-    private Allocation currentTargetAllocation;
+    private Allocation currentTargetAllocation; // may differ from the lastOptimizationResult's allocation during the grace period
+    @Setter
+    private AnalysisResult currentAnalysisResult;
+    @Setter
+    private OptimizationResult lastOptimizationResult;
 
     // Load measured by Monitor
     @Setter
-    private Map<String, Integer> externalServiceLoad;
-    @Setter
-    private Map<String, Integer> internalServiceLoad;
-    @Setter
-    private Map<String, Integer> totalServiceLoad;
-    @Setter
-    private Integer totalSystemLoad;
-    @Setter
-    private SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
+    private ActivityMeasures currentMeasures;
+
 
     @Setter
-    private SimpleWeightedGraph<String, DefaultWeightedEdge> serviceAffinity;
-//    private final Map<Service, Map<Service, Float>> serviceAffinity;
+    private boolean inGracePeriod = false;
 
-//    private final Map<String, String> containerVmAllocation = new HashMap<>();
 
     private final Map<String, List<ContainerInstance>> runningContainersByVm = new HashMap<>();
     private final Map<String, List<ContainerInstance>> runningContainersByType = new HashMap<>();
@@ -94,18 +91,6 @@ public class State {
         var freeMemoryCapacity = vm.getType().getMemory() - allocatedMemoryCapacity;
 
         return Pair.of(freeCpuCapacity, freeMemoryCapacity);
-    }
-
-    public double getAffinityBetween(Service serviceA,
-                                     Service serviceB) {
-        var isSameService = serviceA.equals(serviceB);
-        if (isSameService) {
-            // No affinity between same service possible, graph contains no loops
-            return 0;
-        }
-        var edge = serviceAffinity.getEdge(serviceA.getName(), serviceB.getName());
-        var affinity = serviceAffinity.getEdgeWeight(edge);
-        return affinity;
     }
 
 

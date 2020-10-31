@@ -1,10 +1,10 @@
 package at.alexwais.cooper.scheduler.mapek;
 
-import at.alexwais.cooper.scheduler.dto.LoadMeasures;
+import at.alexwais.cooper.scheduler.dto.MonitoringResult;
 
 
 public interface Monitor {
 
-    LoadMeasures getCurrentLoad(int elapsedSeconds);
+    MonitoringResult getCurrentLoad(int elapsedSeconds);
 
 }

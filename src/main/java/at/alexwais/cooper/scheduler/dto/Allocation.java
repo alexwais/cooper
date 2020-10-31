@@ -1,5 +1,8 @@
-package at.alexwais.cooper.domain;
+package at.alexwais.cooper.scheduler.dto;
 
+import at.alexwais.cooper.domain.ContainerType;
+import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
 import java.util.*;
@@ -13,10 +16,15 @@ public class Allocation {
 
     private final Model model;
     private final Map<VmInstance, List<ContainerType>> vmContainerMapping;
+    private final Map<Service, List<ContainerType>> allocatedContainersByService = new HashMap<>();
 
     public Allocation(Model model, Map<VmInstance, List<ContainerType>> vmContainerMapping) {
         this.model = model;
         this.vmContainerMapping = vmContainerMapping;
+
+        this.getAllocatedContainers().forEach(c -> {
+            MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
+        });
     }
 
     public Allocation(Model model, List<AllocationTuple> allocationTuples) {
@@ -28,6 +36,10 @@ public class Allocation {
                 .forEach(a -> {
                     MapUtils.putToMapList(vmContainerMapping, a.getVm(), a.getContainer());
                 });
+
+        this.getAllocatedContainers().forEach(c -> {
+            MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
+        });
     }
 
     public Map<VmInstance, List<ContainerType>> getAllocationMap() {
@@ -78,6 +90,21 @@ public class Allocation {
                 .filter(e -> !e.getValue().isEmpty())
                 .map(e -> e.getKey().getType().getCost())
                 .reduce(0f, Float::sum);
+    }
+
+
+    public Map<String, Long> getServiceCapacity() {
+        var capacityPerService = new HashMap<String, Long>();
+        for (Map.Entry<Service, List<ContainerType>> allocatedServiceContainers : allocatedContainersByService.entrySet()) {
+            var service = allocatedServiceContainers.getKey();
+            var containers = allocatedServiceContainers.getValue();
+
+            var serviceCapacity = containers.stream()
+                    .map(ContainerType::getRpmCapacity)
+                    .reduce(0L, Long::sum);
+            capacityPerService.put(service.getName(), serviceCapacity);
+        }
+        return capacityPerService;
     }
 
 
