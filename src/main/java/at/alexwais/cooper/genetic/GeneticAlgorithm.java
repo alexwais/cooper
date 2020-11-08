@@ -57,7 +57,7 @@ public class GeneticAlgorithm implements Optimizer {
         var serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
 
         Engine<DistributedIntegerGene, Float> engine1 = Engine
-                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), state), serviceRowCodec)
+                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), state.getCurrentTargetAllocation(), state.getCurrentSystemMeasures()), serviceRowCodec)
 //                .constraint(constraint)
                 .minimizing()
                 .populationSize(300)
@@ -87,7 +87,7 @@ public class GeneticAlgorithm implements Optimizer {
         var decodedAllocationMapping = serviceRowCodec.decode(phenotype.genotype());
 
         stopWatch.stop();
-        return new OptimizationResult(model, state.getCurrentMeasures(), decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
+        return new OptimizationResult(model, state.getCurrentSystemMeasures(), decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
     }
 
 

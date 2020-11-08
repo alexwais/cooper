@@ -3,8 +3,12 @@ package at.alexwais.cooper.scheduler.mapek;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
+import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -25,31 +29,54 @@ public class Analyzer {
     }
 
     public AnalysisResult analyze(State state) {
-        var isCurrentAllocationUnderprovisioned = isUnderprovisioned(state);
-        var isCurrentAllocationValid = validator.isAllocationValid(state.getCurrentTargetAllocation(), state.getCurrentMeasures().getTotalServiceLoad());
+        var lastOptimization = state.getLastOptimizationResult();
+        var currentAllocation = state.getCurrentSystemMeasures().getCurrentAllocation();
+        var currentMeasures = state.getCurrentSystemMeasures();
+
+        // first, determine affinity
         var affinityGraph = buildAffinityGraph(state);
-        state.getCurrentMeasures().setAffinityGraph(affinityGraph);
+        currentMeasures.setAffinityGraph(affinityGraph);
 
+        // compare fitness/load/capacity of current allocation vs. last optimization
+        var loadDriftByService = computeLoadDrift(currentMeasures, lastOptimization);
+        var capacityDriftByService = computeCapacityDrift(currentMeasures, lastOptimization);
+        var fitnessChangePercentage = computeFitnessChangePercentage(currentMeasures, lastOptimization);
 
-        Float fitnessChangePercentage = null;
-        if (state.getLastOptimizationResult() != null) {
-            var previousFitness = state.getLastOptimizationResult().getFitness();
-            var currentFitness = fitnessFunction.eval(state.getCurrentTargetAllocation(), state);
-            var diff = currentFitness - previousFitness;
-            fitnessChangePercentage = (diff / previousFitness) * 100;
-            log.debug("change: {}%", fitnessChangePercentage);
-        }
+        var isCurrentAllocationUnderprovisioned = isUnderprovisioned(state.getCurrentSystemMeasures());
+        var isCurrentAllocationValid = validator.isAllocationValidNeutral(currentAllocation, currentMeasures.getTotalServiceLoad());
 
-        // TODO determine change in load/capacity
-
-
-        return new AnalysisResult(isCurrentAllocationUnderprovisioned, isCurrentAllocationValid, affinityGraph);
+        return new AnalysisResult(
+                affinityGraph,
+                isCurrentAllocationUnderprovisioned,
+                isCurrentAllocationValid,
+                loadDriftByService,
+                capacityDriftByService,
+                fitnessChangePercentage);
     }
 
 
-    private boolean isUnderprovisioned(State state) {
-        var underprovisionedServices = state.getCurrentMeasures().getTotalServiceLoad().entrySet().stream()
-                .filter(e -> isServiceUnderprovisioned(e.getKey(), e.getValue(), state))
+    private Float computeFitnessChangePercentage(SystemMeasures measures, OptimizationResult lastOptimization) {
+        if (lastOptimization == null) {
+            return 0f;
+        }
+
+        var currentFitness = fitnessFunction.eval(measures.getCurrentAllocation(), measures);
+        var previousFitness = lastOptimization.getFitness(); // FIXME use neutral fitness which ignores prev. allocation to determine the drift!
+        var fitnessChangePercentage = calculatePercentageChange(currentFitness, previousFitness);
+        log.debug("change: {}%", fitnessChangePercentage);
+        return fitnessChangePercentage;
+    }
+
+    private float calculatePercentageChange(float current, float previous) {
+        var diff = current - previous;
+        var result = (diff / previous) * 100;
+        return result;
+    }
+
+
+    private boolean isUnderprovisioned(SystemMeasures currentMeasures) {
+        var underprovisionedServices = currentMeasures.getTotalServiceLoad().entrySet().stream()
+                .filter(e -> isServiceUnderprovisioned(e.getKey(), e.getValue(), currentMeasures.getCurrentAllocation()))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
 
@@ -60,13 +87,44 @@ public class Analyzer {
         return !underprovisionedServices.isEmpty();
     }
 
-    private boolean isServiceUnderprovisioned(String serviceName, Integer load, State state) {
-        var capacity = state.getCurrentTargetAllocation().getServiceCapacity().getOrDefault(serviceName, 0L);
+
+    private Map<String, Float> computeLoadDrift(SystemMeasures currentMeasures, OptimizationResult lastOptimization) {
+        if (lastOptimization == null) {
+            return Collections.emptyMap();
+        }
+
+        var driftPerService = currentMeasures.getTotalServiceLoad().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> {
+                    var current = e.getValue();
+                    var prev = lastOptimization.getUnderlyingMeasures().getTotalServiceLoad().get(e.getKey());
+                    var change = calculatePercentageChange(current, prev);
+                    return change;
+                }));
+        return driftPerService;
+    }
+
+    private Map<String, Float> computeCapacityDrift(SystemMeasures currentMeasures, OptimizationResult lastOptimization) {
+        if (lastOptimization == null) {
+            return Collections.emptyMap();
+        }
+
+        var driftPerService = currentMeasures.getCurrentAllocation().getServiceCapacity().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> {
+                    var current = e.getValue();
+                    var prev = lastOptimization.getAllocation().getServiceCapacity().get(e.getKey());
+                    var change = calculatePercentageChange(current, prev);
+                    return change;
+                }));
+        return driftPerService;
+    }
+
+    private boolean isServiceUnderprovisioned(String serviceName, Integer load, Allocation allocation) {
+        var capacity = allocation.getServiceCapacity().getOrDefault(serviceName, 0L);
         return capacity < load;
     }
 
     private SimpleWeightedGraph<String, DefaultWeightedEdge> buildAffinityGraph(State state) {
-        var interactionGraph = state.getCurrentMeasures().getInteractionGraph();
+        var interactionGraph = state.getCurrentSystemMeasures().getInteractionGraph();
 
         var affinityGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
 
@@ -83,7 +141,7 @@ public class Analyzer {
                     var interaction2 = (int) interactionGraph.getEdgeWeight(interactionEdge2);
 
                     var bidirectionalInteraction = interaction1 + interaction2;
-                    var affinity = (double) bidirectionalInteraction / (double) state.getCurrentMeasures().getTotalSystemLoad();
+                    var affinity = (double) bidirectionalInteraction / (double) state.getCurrentSystemMeasures().getTotalSystemLoad();
 
                     var edge = affinityGraph.getEdge(s1.getName(), s2.getName());
                     affinityGraph.setEdgeWeight(edge, affinity);

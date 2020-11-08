@@ -1,6 +1,7 @@
 package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.MonitoringResult;
 import java.util.Map;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 
 @Getter
 @RequiredArgsConstructor
-public class ActivityMeasures {
+public class SystemMeasures {
 
     private final Model model;
 
@@ -21,18 +22,20 @@ public class ActivityMeasures {
     private final Map<String, Integer> totalServiceLoad;
     private final Integer totalSystemLoad;
     private final SimpleDirectedWeightedGraph<String, DefaultWeightedEdge> interactionGraph;
+    private final Allocation currentAllocation;
 
     @Setter
     private SimpleWeightedGraph<String, DefaultWeightedEdge> affinityGraph;
 
 
-    public ActivityMeasures(Model model, MonitoringResult toClone) {
+    public SystemMeasures(Model model, MonitoringResult toClone, Allocation currentAllocation) {
         this(model,
                 toClone.getExternalServiceLoad(),
                 toClone.getInternalServiceLoad(),
                 toClone.getTotalServiceLoad(),
                 toClone.getTotalSystemLoad(),
-                toClone.getInteractionGraph());
+                toClone.getInteractionGraph(),
+                currentAllocation);
     }
 
 

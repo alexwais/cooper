@@ -79,7 +79,7 @@ public class IlpProblem {
 
         var objectiveTerm3 = cplex.linearNumExpr();
         for (var wrapper : variables.getConcurrentAllocationVariables()) {
-            var affinity = state.getCurrentMeasures().getAffinityBetween(wrapper.getC1().getService(), wrapper.getC2().getService());
+            var affinity = state.getCurrentSystemMeasures().getAffinityBetween(wrapper.getC1().getService(), wrapper.getC2().getService());
             var distance = model.getDistanceBetween(wrapper.getK1(), wrapper.getK2());
             objectiveTerm3.addTerm(wrapper.getDecisionVariable(), affinity * distance);
         }
@@ -114,7 +114,7 @@ public class IlpProblem {
                 }
             }
 
-            var totalServiceLoad = state.getCurrentMeasures().getTotalServiceLoad().get(s.getName()); // L_s
+            var totalServiceLoad = state.getCurrentSystemMeasures().getTotalServiceLoad().get(s.getName()); // L_s
 
             var serviceTerm = cplex.linearNumExpr();
             serviceTerm.add(serviceCapacity);
@@ -148,7 +148,7 @@ public class IlpProblem {
                 }
             }
 
-            var totalServiceLoad = state.getCurrentMeasures().getTotalServiceLoad().get(s.getName()); // L_s
+            var totalServiceLoad = state.getCurrentSystemMeasures().getTotalServiceLoad().get(s.getName()); // L_s
             cplex.addGe(leftSide, totalServiceLoad);
         }
 
@@ -320,7 +320,7 @@ public class IlpProblem {
             var leftSide = variables.getVmGracePeriodVariable(k);
 
             var rightSide = cplex.linearNumExpr();
-            var isPreviouslyLeased = state.getLeasedVms().contains(k); // beta_k
+            var isPreviouslyLeased = state.getCurrentTargetAllocation().getRunningVms().contains(k); // beta_k
             var vmAllocatedVariable = variables.getVmAllocationVariable(k);
 
             if (isPreviouslyLeased) {

@@ -1,15 +1,9 @@
 package at.alexwais.cooper.genetic;
 
-import at.alexwais.cooper.domain.ContainerType;
-import at.alexwais.cooper.domain.Service;
-import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,31 +14,19 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
+    public float eval(Allocation resourceAllocation, SystemMeasures measures) {
+        return eval(resourceAllocation, null, measures);
+    }
 
-    public float eval(Allocation resourceAllocation, State state) {
+    public float eval(Allocation resourceAllocation, Allocation previousAllocation, SystemMeasures measures) {
         // Term 1 - Minimize Cost
         var totalCost = resourceAllocation.getTotalCost();
 
         // Term 2 - Grace Period Cost
-        var gracePeriodCost = state.getLeasedVms().stream()
+        var gracePeriodCost = measures.getCurrentAllocation().getAllocatedVms().stream()
                 .filter(vm -> !resourceAllocation.getAllocatedVms().contains(vm))
                 .map(vm -> vm.getType().getCost())
                 .reduce(0f, Float::sum);
-
-        // Term 3 - Exploiting Co-Location
-//        var distanceLatency = 0f;
-//        for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
-//            for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
-//                var vmA = allocationInstanceA.getVm();
-//                var vmB = allocationInstanceB.getVm();
-//                var containerA = allocationInstanceA.getContainer();
-//                var containerB = allocationInstanceB.getContainer();
-//
-//                var distance = getDistanceBetween(vmA, vmB);
-//                var affinity = getAffinityBetween(containerA, containerB, state.getServiceAffinity());
-//                distanceLatency += (affinity * distance);
-//            }
-//        }
 
         // Term 3 - Exploiting Co-Location
         var distanceBonus = 0f;
@@ -57,7 +39,7 @@ public class FitnessFunction {
 
                 var distance = model.getDistanceBetween(vmA, vmB);
                 if (distance > 0) { // prevent division by zero
-                    var affinity = state.getCurrentMeasures().getAffinityBetween(containerA.getService(), containerB.getService());
+                    var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
                     distanceBonus -= (affinity / distance);
                 }
             }
@@ -65,25 +47,26 @@ public class FitnessFunction {
 
         // Term 4 - Minimize Over-Provisioning
         var overProvisionedCapacity = 0;
-        var allocatedContainersByService = new HashMap<Service, List<ContainerType>>();
-        resourceAllocation.getAllocatedContainers().forEach(c -> {
-            MapUtils.putToMapList(allocatedContainersByService, c.getService(), c);
-        });
-        for (Map.Entry<Service, List<ContainerType>> allocatedServiceContainers : allocatedContainersByService.entrySet()) {
-            var service = allocatedServiceContainers.getKey();
-            var containers = allocatedServiceContainers.getValue();
+        var allocatedContainersByService = resourceAllocation.getAllocatedContainersByService();
+        for (var allocatedServiceInstances : allocatedContainersByService.entrySet()) {
+            var service = allocatedServiceInstances.getKey();
+            var containerInstances = allocatedServiceInstances.getValue();
 
-            var serviceCapacity = containers.stream()
-                    .map(ContainerType::getRpmCapacity)
+            var serviceCapacity = containerInstances.stream()
+                    .map(a -> a.getContainer().getRpmCapacity())
                     .reduce(0L, Long::sum);
-            var serviceLoad = state.getCurrentMeasures().getTotalServiceLoad().get(service.getName());
+            var serviceLoad = measures.getTotalServiceLoad().get(service.getName());
 
             var overProvisionedServiceCapacity = Math.abs(serviceCapacity - serviceLoad);
             overProvisionedCapacity += overProvisionedServiceCapacity;
         }
 
-
-        var violations = validator.violations(resourceAllocation, state.getCurrentMeasures().getTotalServiceLoad());
+        int violations = 0;
+        if (previousAllocation == null) {
+            violations = validator.neutralViolations(resourceAllocation, measures.getTotalServiceLoad());
+        } else {
+            violations = validator.violations(resourceAllocation, previousAllocation, measures.getTotalServiceLoad());
+        }
 
         var w_cost = 100;
         var w_gradePeriodWaste = 50;

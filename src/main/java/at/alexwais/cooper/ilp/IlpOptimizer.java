@@ -34,7 +34,7 @@ public class IlpOptimizer implements Optimizer {
 
         stopWatch.stop();
 
-        return new OptimizationResult(model, state.getCurrentMeasures(), allocationTuples);
+        return new OptimizationResult(model, state.getCurrentSystemMeasures(), allocationTuples);
     }
 
 }

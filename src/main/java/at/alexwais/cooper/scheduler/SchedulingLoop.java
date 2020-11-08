@@ -36,9 +36,8 @@ public class SchedulingLoop {
     private final State currentState;
 
     private long currentClock = 0L; // seconds
-    private long gracePeriodUntil = 0;
 
-    private static final long MAX_RUNTIME = 300L; // seconds
+    private static final long MAX_RUNTIME = 1260L; // seconds
     private static final long GRACE_PERIOD = 120L; // seconds
 
 
@@ -93,15 +92,15 @@ public class SchedulingLoop {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
             currentClock = clock;
-            if (currentState.isInGracePeriod() && currentClock >= gracePeriodUntil) {
-                currentState.setInGracePeriod(false);
-            }
+//            if (currentState.isInGracePeriod() && currentClock >= gracePeriodUntil) {
+//                currentState.setInGracePeriod(false);
+//            }
 
-            if (currentState.isInGracePeriod()) {
-                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s (GRACE PERIOD) ", currentClock);
-            } else {
+//            if (currentState.isInGracePeriod()) {
+//                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s (GRACE PERIOD) ", currentClock);
+//            } else {
                 log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s ", currentClock);
-            }
+//            }
 
 
             if (clock >= MAX_RUNTIME) {
@@ -115,12 +114,12 @@ public class SchedulingLoop {
             var executionPlan = planner.plan(currentState);
 
             if (executionPlan.isReallocation()) {
-                executor.execute(scheduler, executionPlan, currentState);
-                currentState.setCurrentTargetAllocation(executionPlan.getOptimizationResult().getAllocation());
-                currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
-
-                currentState.setInGracePeriod(true);
-                gracePeriodUntil = currentClock + GRACE_PERIOD;
+                executor.execute(scheduler, executionPlan.getTargetAllocation(), currentState);
+                currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
+                if (executionPlan.getOptimizationResult() != null) {
+                    currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
+                }
+//                gracePeriodUntil = currentClock + GRACE_PERIOD;
             } else {
                 log.info("No reallocation performed!");
             }
@@ -142,7 +141,7 @@ public class SchedulingLoop {
 
     private void monitor() {
         var measuredLoad = monitor.getCurrentLoad((int) currentClock);
-        currentState.setCurrentMeasures(new ActivityMeasures(model, measuredLoad));
+        currentState.setCurrentSystemMeasures(new SystemMeasures(model, measuredLoad, currentState.getCurrentTargetAllocation()));
     }
 
     private void analyze() {
@@ -155,9 +154,9 @@ public class SchedulingLoop {
         System.out.println();
         System.out.println("Service Load:");
         System.out.println();
-        var serviceCapacity = currentState.getServiceCapacity();
+        var serviceCapacity = currentState.getCurrentTargetAllocation().getServiceCapacity();
         var table = new ConsoleTable("Service", "Load", "Capacity");
-        currentState.getCurrentMeasures().getTotalServiceLoad().forEach((key, value) -> table.addRow(key, value, serviceCapacity.get(key)));
+        currentState.getCurrentSystemMeasures().getTotalServiceLoad().forEach((key, value) -> table.addRow(key, value, serviceCapacity.getOrDefault(key, 0L)));
         table.print();
     }
 
@@ -166,10 +165,13 @@ public class SchedulingLoop {
         System.out.println("VM Allocation:");
         System.out.println();
         var table = new ConsoleTable("ID", "Type", "Free CPU", "Free Memory", "Containers");
-        currentState.getLeasedVms().forEach(vm -> {
-            var containerList = currentState.getRunningContainersByVm().get(vm.getId());
-            var allocatedContainerTypes = containerList != null ? containerList.stream().map(c -> c.getConfiguration().getLabel()).collect(Collectors.joining(", ")) : "-";
-            var capacity = currentState.getFreeCapacity(vm.getId());
+        currentState.getCurrentTargetAllocation().getRunningVms().forEach(vm -> {
+            var containerList = currentState.getProviderState().getRunningContainersByVm(vm);
+            var allocatedContainerTypes = containerList != null ? containerList.stream().map(a -> a.getContainer().getLabel()).collect(Collectors.joining(", ")) : "-";
+            var capacity = currentState.getFreeCapacity(vm);
+            if (capacity.getLeft() < 0 || capacity.getRight() < 0L) {
+                throw new IllegalStateException("Capacity is negative");
+            }
             table.addRow(vm.getId(), vm.getType().getLabel(), capacity.getLeft(), capacity.getRight(), allocatedContainerTypes);
         });
         table.print();
