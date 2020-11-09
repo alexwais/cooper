@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DataCenter {
 
+    private final boolean onPremise;
+
     private final String name;
 
     private final List<VmType> vmTypes = new ArrayList<>();

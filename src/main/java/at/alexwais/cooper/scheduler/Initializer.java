@@ -63,15 +63,17 @@ public class Initializer {
 
     private void initDataCenters(DataCenterConfigMap configMap) {
         configMap.forEach((key, config) -> {
-            var dc = new DataCenter(key);
+            var dc = new DataCenter(config.isOnPremise(), key);
 
             var totalInstanceCounter = 1000;
             for (var t : config.getInstanceTypes()) {
                 var vmType = new VmType(t.getLabel(), t.getCpuCores(), (int) t.getMemory().toMegabytes(), t.getCost(), dc);
                 dc.getVmTypes().add(vmType);
 
+                var instanceCount = dc.isOnPremise() ? t.getCount() : INSTANCE_COUNT;
+
                 var instances = new ArrayList<VmInstance>();
-                for (int j = 0; j < INSTANCE_COUNT; j++) {
+                for (int j = 0; j < instanceCount; j++) {
                     var instanceId = dc.getName() + ":i" + totalInstanceCounter++;
                     instances.add(new VmInstance(instanceId, vmType, dc));
                 }

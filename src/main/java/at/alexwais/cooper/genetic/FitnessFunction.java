@@ -23,8 +23,9 @@ public class FitnessFunction {
         var totalCost = resourceAllocation.getTotalCost();
 
         // Term 2 - Grace Period Cost
-        var gracePeriodCost = measures.getCurrentAllocation().getAllocatedVms().stream()
-                .filter(vm -> !resourceAllocation.getAllocatedVms().contains(vm))
+        // TODO use running vs. used VMs?
+        var gracePeriodCost = measures.getCurrentAllocation().getUsedVms().stream()
+                .filter(vm -> !resourceAllocation.getUsedVms().contains(vm))
                 .map(vm -> vm.getType().getCost())
                 .reduce(0f, Float::sum);
 

@@ -158,7 +158,7 @@ public class Planner {
 
         model.getVms().forEach((vmId, vm) -> {
             var isRunning = state.getCurrentTargetAllocation().getRunningVms().contains(vm);
-            var shouldRun = optimizationResult.getAllocation().getAllocatedVms().contains(vm);
+            var shouldRun = optimizationResult.getAllocation().getRunningVms().contains(vm);
 
             if (!isRunning && shouldRun) {
                 vmLaunchList.add(vm);

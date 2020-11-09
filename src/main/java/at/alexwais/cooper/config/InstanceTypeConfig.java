@@ -12,6 +12,8 @@ public class InstanceTypeConfig {
 
     private DataSize memory; // MB
 
-    private Float cost; // USD
+    private Float cost = 0f; // USD; 0 in case of on-premise instances
+
+    private Integer count = null; // in case of on-premise instances
 
 }

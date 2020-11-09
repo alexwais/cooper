@@ -11,7 +11,6 @@ import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
 import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
-import java.util.HashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +44,7 @@ public class SchedulingLoop {
     public SchedulingLoop(Model model) {
         this.model = model;
         this.currentState = new State(model);
-        this.currentState.setCurrentTargetAllocation(new Allocation(model, new HashMap<>()));
+        this.currentState.setCurrentTargetAllocation(new Allocation(model));
 
         this.validator = new Validator(model);
 

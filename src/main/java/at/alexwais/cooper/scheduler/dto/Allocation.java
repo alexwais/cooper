@@ -1,6 +1,7 @@
 package at.alexwais.cooper.scheduler.dto;
 
 import at.alexwais.cooper.domain.ContainerType;
+import at.alexwais.cooper.domain.DataCenter;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.MapUtils;
@@ -15,9 +16,18 @@ import lombok.RequiredArgsConstructor;
 public class Allocation {
 
     private final Model model;
-    private final Collection<VmInstance> runningVMs;
+    private final List<VmInstance> runningVMs;
     private final Map<VmInstance, List<ContainerType>> vmContainerMapping;
     private final Map<Service, List<AllocationTuple>> allocatedContainersByService = new HashMap<>();
+
+    /**
+     * Creates an empty allocation (for initial state)
+     */
+    public Allocation(Model model) {
+        this.model = model;
+        this.runningVMs = new ArrayList<>();
+        this.vmContainerMapping = new HashMap<>();
+    }
 
     public Allocation(Model model, Map<VmInstance, List<ContainerType>> vmContainerMapping) {
         this(model, vmContainerMapping.keySet(), vmContainerMapping);
@@ -25,21 +35,10 @@ public class Allocation {
 
     public Allocation(Model model, Collection<VmInstance> runningVms, Map<VmInstance, List<ContainerType>> vmContainerMapping) {
         this.model = model;
-        this.runningVMs = runningVms;
+        this.runningVMs = new ArrayList<>(runningVms);
         this.vmContainerMapping = vmContainerMapping;
 
-        var inconsistentMapping = this.vmContainerMapping.keySet().stream()
-                .anyMatch(vm -> !this.runningVMs.contains(vm));
-
-        if (inconsistentMapping) {
-            throw new IllegalStateException("cannot allocate containers on not running VM");
-        }
-
-        for (var e : vmContainerMapping.entrySet()) {
-            for (var containerType : e.getValue()) {
-                MapUtils.putToMapList(allocatedContainersByService, containerType.getService(), new AllocationTuple(e.getKey(), containerType, true));
-            }
-        }
+        init();
     }
 
     public Allocation(Model model, List<AllocationTuple> allocationTuples) {
@@ -50,7 +49,29 @@ public class Allocation {
                 .forEach(a -> {
                     MapUtils.putToMapList(vmContainerMapping, a.getVm(), a.getContainer());
                 });
-        this.runningVMs = vmContainerMapping.keySet();
+        this.runningVMs = new ArrayList<>(vmContainerMapping.keySet());
+
+        init();
+    }
+
+    private void init() {
+        var inconsistentMapping = this.vmContainerMapping.keySet().stream()
+                .anyMatch(vm -> !this.runningVMs.contains(vm));
+
+        if (inconsistentMapping) {
+            throw new IllegalStateException("cannot allocate containers on not running VM");
+        }
+
+        // always add on-premise VMs to running VMs
+        model.getDataCenters().values().stream()
+                .filter(DataCenter::isOnPremise)
+                .forEach(dc -> {
+                    dc.getVmInstances().forEach(vm -> {
+                        if (!runningVMs.contains(vm)) {
+                            runningVMs.add(vm);
+                        }
+                    });
+                });
 
         for (var e : vmContainerMapping.entrySet()) {
             for (var containerType : e.getValue()) {
@@ -68,7 +89,7 @@ public class Allocation {
         return containersOnVm.contains(containerType);
     }
 
-    public List<VmInstance> getAllocatedVms() {
+    public List<VmInstance> getUsedVms() {
         return vmContainerMapping.entrySet().stream()
                 .filter(e -> !e.getValue().isEmpty())
                 .map(Map.Entry::getKey)
@@ -76,7 +97,7 @@ public class Allocation {
     }
 
     // TODO VMs running, even if unused -> i.e. private cloud!
-    public Collection<VmInstance> getRunningVms() {
+    public List<VmInstance> getRunningVms() {
         return runningVMs;
     }
 
@@ -112,7 +133,7 @@ public class Allocation {
     }
 
     public float getTotalCost() {
-        return getAllocatedVms().stream()
+        return getRunningVms().stream()
                 .map(vm -> vm.getType().getCost())
                 .reduce(0f, Float::sum);
     }
