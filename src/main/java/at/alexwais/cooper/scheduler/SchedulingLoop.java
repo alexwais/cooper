@@ -88,25 +88,26 @@ public class SchedulingLoop {
 //        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
     }
 
+
+    private Allocation drainedTargetAllocation;
+
     class SchedulingListener implements Listener {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
             currentClock = clock;
-//            if (currentState.isInGracePeriod() && currentClock >= gracePeriodUntil) {
-//                currentState.setInGracePeriod(false);
-//            }
-
-//            if (currentState.isInGracePeriod()) {
-//                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s (GRACE PERIOD) ", currentClock);
-//            } else {
-                log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s ", currentClock);
-//            }
-
-
+            log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s ", currentClock);
             if (clock >= MAX_RUNTIME) {
                 scheduler.abort();
             }
 
+            // The final (drained) target allocation will be enforced after the current cycle completed
+            // A new Optimization may take place immediately after grace period (with containers/VMs still running)
+            if (drainedTargetAllocation != null) {
+                log.info("Applying final target allocation after draining period...");
+                executor.execute(scheduler, drainedTargetAllocation, currentState);
+                currentState.setCurrentTargetAllocation(drainedTargetAllocation);
+                drainedTargetAllocation = null;
+            }
 
             monitor();
             analyze();
@@ -116,14 +117,16 @@ public class SchedulingLoop {
             if (executionPlan.isReallocation()) {
                 executor.execute(scheduler, executionPlan.getTargetAllocation(), currentState);
                 currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
+
+                if (executionPlan.getDrainedTargetAllocation() != null) {
+                    drainedTargetAllocation = executionPlan.getDrainedTargetAllocation();
+                }
                 if (executionPlan.getOptimizationResult() != null) {
                     currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
                 }
-//                gracePeriodUntil = currentClock + GRACE_PERIOD;
             } else {
-                log.info("No reallocation performed!");
+                // log.info("No reallocation performed!");
             }
-
 
             printServiceLoad();
             printAllocationStatus();

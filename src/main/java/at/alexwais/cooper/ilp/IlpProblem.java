@@ -1,7 +1,7 @@
 package at.alexwais.cooper.ilp;
 
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import ilog.concert.IloException;
 import ilog.cplex.IloCplex;
@@ -14,16 +14,19 @@ import org.springframework.util.StopWatch;
 public class IlpProblem {
 
     private final Model model;
-    private final State state;
+    private final Allocation previousAllocation;
+    private final SystemMeasures systemMeasures;
+
     private final IloCplex cplex;
     private final Variables variables;
 
     private static final boolean ENABLE_COLOCATION = true;
 
 
-    public IlpProblem(Model model, State state) {
+    public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures) {
         this.model = model;
-        this.state = state;
+        this.previousAllocation = previousAllocation;
+        this.systemMeasures = systemMeasures;
 
         try {
             this.cplex = new IloCplex();
@@ -79,7 +82,7 @@ public class IlpProblem {
 
         var objectiveTerm3 = cplex.linearNumExpr();
         for (var wrapper : variables.getConcurrentAllocationVariables()) {
-            var affinity = state.getCurrentSystemMeasures().getAffinityBetween(wrapper.getC1().getService(), wrapper.getC2().getService());
+            var affinity = systemMeasures.getAffinityBetween(wrapper.getC1().getService(), wrapper.getC2().getService());
             var distance = model.getDistanceBetween(wrapper.getK1(), wrapper.getK2());
             objectiveTerm3.addTerm(wrapper.getDecisionVariable(), affinity * distance);
         }
@@ -114,7 +117,7 @@ public class IlpProblem {
                 }
             }
 
-            var totalServiceLoad = state.getCurrentSystemMeasures().getTotalServiceLoad().get(s.getName()); // L_s
+            var totalServiceLoad = systemMeasures.getTotalServiceLoad().get(s.getName()); // L_s
 
             var serviceTerm = cplex.linearNumExpr();
             serviceTerm.add(serviceCapacity);
@@ -148,7 +151,7 @@ public class IlpProblem {
                 }
             }
 
-            var totalServiceLoad = state.getCurrentSystemMeasures().getTotalServiceLoad().get(s.getName()); // L_s
+            var totalServiceLoad = systemMeasures.getTotalServiceLoad().get(s.getName()); // L_s
             cplex.addGe(leftSide, totalServiceLoad);
         }
 
@@ -236,7 +239,7 @@ public class IlpProblem {
 
                 var rightSideSum = 0;
                 for (var cs : s.getContainerTypes()) {
-                    var isPreviouslyAllocated = state.getCurrentTargetAllocation().isAllocated(cs, k); // z_{cs,k}
+                    var isPreviouslyAllocated = previousAllocation.isAllocated(cs, k); // z_{cs,k}
                     var cpuUsage = cs.getCpuShares(); // U_{c_s}^{CPU}
                     if (isPreviouslyAllocated) {
                         rightSideSum += cpuUsage;
@@ -281,7 +284,7 @@ public class IlpProblem {
 
                 var rightSideSum = 0;
                 for (var cs : s.getContainerTypes()) {
-                    var isPreviouslyAllocated = state.getCurrentTargetAllocation().isAllocated(cs, k); // z_{cs,k}
+                    var isPreviouslyAllocated = previousAllocation.isAllocated(cs, k); // z_{cs,k}
                     var memUsage = cs.getMemory().toMegabytes(); // U_{c_s}^{MEM}
                     if (isPreviouslyAllocated) {
                         rightSideSum += memUsage;
@@ -320,7 +323,7 @@ public class IlpProblem {
             var leftSide = variables.getVmGracePeriodVariable(k);
 
             var rightSide = cplex.linearNumExpr();
-            var isPreviouslyLeased = state.getCurrentTargetAllocation().getRunningVms().contains(k); // beta_k
+            var isPreviouslyLeased = previousAllocation.getRunningVms().contains(k); // beta_k
             var vmAllocatedVariable = variables.getVmAllocationVariable(k);
 
             if (isPreviouslyLeased) {

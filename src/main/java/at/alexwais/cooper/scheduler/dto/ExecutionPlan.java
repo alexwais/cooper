@@ -13,6 +13,7 @@ public class ExecutionPlan {
     private boolean isReallocation = true;
 
     private final Allocation targetAllocation;
+    private final Allocation drainedTargetAllocation;
     private final OptimizationResult optimizationResult;
 
     private final List<String> vmsToLaunch;
@@ -25,6 +26,17 @@ public class ExecutionPlan {
     public ExecutionPlan(Allocation targetAllocation) {
         this.isReallocation = true;
         this.targetAllocation = targetAllocation;
+        this.drainedTargetAllocation = null;
+        this.optimizationResult = null;
+        this.vmsToLaunch = null;
+        this.vmsToTerminate = null;
+        this.containersToStart = null;
+        this.containersToStop = null;
+    }
+    public ExecutionPlan(Allocation targetAllocation, Allocation drainedTargetAllocation) {
+        this.isReallocation = true;
+        this.targetAllocation = targetAllocation;
+        this.drainedTargetAllocation = drainedTargetAllocation;
         this.optimizationResult = null;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
@@ -34,6 +46,7 @@ public class ExecutionPlan {
     public ExecutionPlan(Allocation targetAllocation, OptimizationResult optimizationResult) {
         this.isReallocation = true;
         this.targetAllocation = targetAllocation;
+        this.drainedTargetAllocation = null;
         this.optimizationResult = optimizationResult;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
@@ -44,6 +57,7 @@ public class ExecutionPlan {
     public ExecutionPlan(boolean isReallocation, Allocation targetAllocation) {
         this.isReallocation = isReallocation;
         this.targetAllocation = targetAllocation;
+        this.drainedTargetAllocation = null;
         this.optimizationResult = null;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;

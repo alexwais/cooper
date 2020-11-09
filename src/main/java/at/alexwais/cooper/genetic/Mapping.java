@@ -4,7 +4,7 @@ import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
 import io.jenetics.Genotype;
 import io.jenetics.util.ISeq;
 import java.util.ArrayList;
@@ -19,16 +19,16 @@ import org.apache.commons.math3.distribution.EnumeratedIntegerDistribution;
 public class Mapping {
 
     private final Model model;
-    private final State state;
+    private final SystemMeasures systemMeasures;
     private int vmCount;
     private int containerTypeCount;
     private int serviceCount;
     private final Map<VmInstance, Integer> vmsIndex = new HashMap<>();
     private final Map<Service, Integer> servicesIndex = new HashMap<>();
 
-    public Mapping(Model model, State state) {
+    public Mapping(Model model, SystemMeasures systemMeasures) {
         this.model = model;
-        this.state = state;
+        this.systemMeasures = systemMeasures;
         this.vmCount = model.getVms().size();
         this.containerTypeCount = model.getContainerTypes().size();
         this.serviceCount = model.getServices().size();
@@ -101,7 +101,7 @@ public class Mapping {
     }
 
     private double shareOfServiceLoadToOverallCapacity(Service service) {
-        var overallServiceLoad = state.getCurrentSystemMeasures().getTotalServiceLoad().get(service.getName());
+        var overallServiceLoad = systemMeasures.getTotalServiceLoad().get(service.getName());
         var overallCapacityForService = service.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);

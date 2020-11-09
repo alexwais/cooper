@@ -2,7 +2,7 @@ package at.alexwais.cooper.genetic;
 
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
-import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
@@ -49,15 +49,15 @@ public class GeneticAlgorithm implements Optimizer {
 
     }
 
-    public OptimizationResult optimize(State state) {
+    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
-        var mapping = new Mapping(model, state);
+        var mapping = new Mapping(model, systemMeasures);
         var serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
 
         Engine<DistributedIntegerGene, Float> engine1 = Engine
-                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), state.getCurrentTargetAllocation(), state.getCurrentSystemMeasures()), serviceRowCodec)
+                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures), serviceRowCodec)
 //                .constraint(constraint)
                 .minimizing()
                 .populationSize(300)
@@ -82,12 +82,12 @@ public class GeneticAlgorithm implements Optimizer {
                 .limit(250)
                 .collect(EvolutionResult.toBestPhenotype());
 
-        log.info("Result fitness: {}", phenotype.fitness());
+        log.debug("Result fitness: {}", phenotype.fitness());
 
         var decodedAllocationMapping = serviceRowCodec.decode(phenotype.genotype());
 
         stopWatch.stop();
-        return new OptimizationResult(model, state.getCurrentSystemMeasures(), decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
+        return new OptimizationResult(model, systemMeasures, decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
     }
 
 

@@ -2,7 +2,8 @@ package at.alexwais.cooper.ilp;
 
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
-import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.SystemMeasures;
+import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import ilog.cplex.IloCplex;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +20,11 @@ public class IlpOptimizer implements Optimizer {
     }
 
 
-    public OptimizationResult optimize(State state) {
+    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
-        var problem = new IlpProblem(model, state);
+        var problem = new IlpProblem(model, previousAllocation, systemMeasures);
 
         var params = new IloCplex.ParameterSet();
 //        params.setParam(IloCplex.DoubleParam.MIP.Tolerances.MIPGap, 0.00000000000000000000000000000001);
@@ -34,7 +35,7 @@ public class IlpOptimizer implements Optimizer {
 
         stopWatch.stop();
 
-        return new OptimizationResult(model, state.getCurrentSystemMeasures(), allocationTuples);
+        return new OptimizationResult(model, systemMeasures, allocationTuples);
     }
 
 }

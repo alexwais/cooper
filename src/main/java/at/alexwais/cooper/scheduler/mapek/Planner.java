@@ -5,10 +5,7 @@ import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import at.alexwais.cooper.ilp.IlpOptimizer;
-import at.alexwais.cooper.scheduler.MapUtils;
-import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.State;
-import at.alexwais.cooper.scheduler.Validator;
+import at.alexwais.cooper.scheduler.*;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
@@ -64,10 +61,15 @@ public class Planner {
     private ReallocationPlan currentReallocation = null;
 
     public ExecutionPlan plan(State state) {
-        if (currentReallocation != null) {
+        var isInGracePeriod = currentReallocation != null;
+
+        if (isInGracePeriod) {
             var resultingTargetAllocation = applyReallocation(state.getCurrentTargetAllocation(), currentReallocation);
-            if (currentReallocation.getStep() >= 4) {
+            if (currentReallocation.getStep() == 4) {
+                var drainedTargetAllocation = currentReallocation.optimizationResult.getAllocation();
                 currentReallocation = null;
+                // the final (drained) target allocation will be enforced after the current cycle completed
+                return new ExecutionPlan(resultingTargetAllocation, drainedTargetAllocation);
             }
             return new ExecutionPlan(resultingTargetAllocation);
         } else {
@@ -76,7 +78,7 @@ public class Planner {
                 return noOpExecution(state.getCurrentTargetAllocation());
             }
 
-            var optimizationResult = optimize(state);
+            var optimizationResult = optimize(state.getCurrentTargetAllocation(), state.getCurrentSystemMeasures());
             var reallocationPlan = buildReallocationPlan(optimizationResult, state);
             var resultingTargetAllocation = applyReallocation(state.getCurrentTargetAllocation(), reallocationPlan);
 
@@ -130,12 +132,12 @@ public class Planner {
     }
 
 
-    private OptimizationResult optimize(State state) {
+    private OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
 //        var greedyOptimizer = new GreedyOptimizer(model, state);
 //        var greedyResult = greedyOptimizer.optimize(state);
 //        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state.getCurrentSystemMeasures()));
 
-        var geneticResult = geneticOptimizer.optimize(state);
+        var geneticResult = geneticOptimizer.optimize(previousAllocation, systemMeasures);
 
 //        var ilpResult = ilpOptimizer.optimize(state);
 //        ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), state.getCurrentSystemMeasures()));
@@ -145,7 +147,7 @@ public class Planner {
 
 //        var optimizationResult = ilpResult;
         var optimizationResult = geneticResult;
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), state.getCurrentTargetAllocation(), state.getCurrentSystemMeasures().getTotalServiceLoad())) {
+        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, systemMeasures.getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }
         return optimizationResult;
@@ -196,33 +198,42 @@ public class Planner {
     private Allocation applyReallocation(Allocation currentTargetAllocation, ReallocationPlan reallocationPlan) {
         reallocationPlan.setStep(reallocationPlan.getStep() + 1);
 
-        if (reallocationPlan.getStep() == 1) {
-            var vmsToRun = new ArrayList<VmInstance>();
-            vmsToRun.addAll(currentTargetAllocation.getRunningVms());
-            vmsToRun.addAll(reallocationPlan.getVmLaunchList());
+        log.info("GRACE PERIOD - applying reallocation cycle {}/4", reallocationPlan.getStep());
 
-            return new Allocation(model, vmsToRun, currentTargetAllocation.getAllocationMap());
-        } else if (reallocationPlan.getStep() == 2) {
-            // remove scaled container instances
-            var allocationTuples = currentTargetAllocation.getAllocatedTuples().stream()
-                    .filter(a -> {
-                        var containersToRemove = reallocationPlan.getReplacedContainers().getOrDefault(a.getVm(), Collections.emptyList());
-                        return !containersToRemove.contains(a.getContainer());
-                    }).collect(Collectors.toList());
+        switch (reallocationPlan.getStep()) {
 
-            // add new container instances
-            reallocationPlan.getContainerLaunchList().forEach(p -> {
-                allocationTuples.add(new Allocation.AllocationTuple(p.getLeft(), p.getRight(), true));
-            });
+            case 1: // t+0s (start new VMs)
+                var vmsToRun = new ArrayList<VmInstance>();
+                vmsToRun.addAll(currentTargetAllocation.getRunningVms());
+                vmsToRun.addAll(reallocationPlan.getVmLaunchList());
+                return new Allocation(model, vmsToRun, currentTargetAllocation.getAllocationMap());
 
-            return new Allocation(model, allocationTuples);
-        } else if (reallocationPlan.getStep() == 3) {
-            // container draining period starts here, so no previous allocation is maintained
-            return currentTargetAllocation;
-        } else if (reallocationPlan.getStep() == 4) {
-            // the optimization target allocation already leads to killing of any abandoned containers & VMs
-            return reallocationPlan.getOptimizationResult().getAllocation();
+            case 2: // t+30s
+                return currentTargetAllocation;
+
+            case 3: // t+60s (VM startup time elapsed -> start containers)
+                // remove scaled container instances
+                var allocationTuples = currentTargetAllocation.getAllocatedTuples().stream()
+                        .filter(a -> {
+                            var containersToRemove = reallocationPlan.getReplacedContainers().getOrDefault(a.getVm(), Collections.emptyList());
+                            return !containersToRemove.contains(a.getContainer());
+                        }).collect(Collectors.toList());
+
+                // add new container instances
+                reallocationPlan.getContainerLaunchList().forEach(p -> {
+                    allocationTuples.add(new Allocation.AllocationTuple(p.getLeft(), p.getRight(), true));
+                });
+                return new Allocation(model, allocationTuples);
+
+            case 4: // t+90s (container startup time elapsed -> drain containers)
+                // container draining period starts here, so previous allocation is maintained
+                return currentTargetAllocation;
+
+            // case 5: // t+60s (container draining period elapsed -> terminate containers & VMs)
+                // the optimization target allocation is used which leads to killing of any abandoned containers & VMs
+                // the final (drained) target allocation will be enforced during main loop after the current cycle completed
         }
+
         throw new IllegalStateException("Cannot apply reallocation for step " + reallocationPlan.getStep());
     }
 
