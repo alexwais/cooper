@@ -4,8 +4,12 @@ logging:
     at.alexwais.cooper: DEBUG
     org.springframework.boot.autoconfigure: ERROR
 
-
 scenario: ${spring.profiles.active}
 loadFixture: ${scenario}.csv
 
-# create a profile configuration ('application-*.yaml') and load fixture csv file (*.csv) for each scenario
+optimization:
+  algorithm: CPLEX
+  enableColocation: true
+
+# For each scenario, a profile configuration ('application-*.yaml') and load fixture csv file (*.csv) is to be created.
+# Run Spring Boot using the scenario name as profile to switch between different profiles.

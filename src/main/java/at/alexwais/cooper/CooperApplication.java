@@ -5,7 +5,7 @@ import at.alexwais.cooper.config.DataCenterDistanceConfigList;
 import at.alexwais.cooper.config.ServiceConfigMap;
 import at.alexwais.cooper.scheduler.Initializer;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.SchedulingLoop;
+import at.alexwais.cooper.scheduler.SchedulingCycle;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +30,7 @@ public class CooperApplication implements CommandLineRunner {
 	private ServiceConfigMap serviceConfig;
 
 	@Autowired
-	private SchedulingLoop scheduler;
+	private SchedulingCycle scheduler;
 	@Value("${scenario}")
 	private String scenario;
 

@@ -54,7 +54,7 @@ public class CsvLoader {
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = br.readLine()) != null) {
-                    var values = line.split(COMMA_DELIMITER);
+                    var values = line.split(",|;");
                     records.add(Arrays.asList(values));
                 }
             }

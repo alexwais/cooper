@@ -64,41 +64,62 @@ distance:
     latency: 120
 
 services:
+  service-gw:
+    downstreamServices:
+      service-a: 0.5
+      service-b: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
   service-a:
     downstreamServices:
       service-b: 0.5
     containerConfigurations:
-      - label: 1500@1000
-        rpmCapacity: 1500
+      - label: 600@1024
+        rpmCapacity: 600
+        cpuShares: 512
+        memory: 1024MB
+      - label: 900@2048
+        rpmCapacity: 900
         cpuShares: 1024
-        memory: 1000MB
-      - label: 3000@2000
-        rpmCapacity: 3000
-        cpuShares: 1024
-        memory: 2000MB
-      - label: 8000@4000
-        rpmCapacity: 8000
+        memory: 2048MB
+      - label: 1350@4096
+        rpmCapacity: 1350
         cpuShares: 2048
-        memory: 4000MB
-      - label: 12000@8000
-        rpmCapacity: 12000
-        cpuShares: 2048
-        memory: 8000MB
+        memory: 4096MB
+      - label: 2025@8192
+        rpmCapacity: 2025
+        cpuShares: 4096
+        memory: 8192MB
   service-b:
     containerConfigurations:
-      - label: 1000@500
-        rpmCapacity: 1000
+      - label: 600@1024
+        rpmCapacity: 600
+        cpuShares: 512
+        memory: 1024MB
+      - label: 900@2048
+        rpmCapacity: 900
         cpuShares: 1024
-        memory: 500MB
-      - label: 1500@1000
-        rpmCapacity: 1500
-        cpuShares: 1024
-        memory: 1000MB
-      - label: 3000@2000
-        rpmCapacity: 3000
-        cpuShares: 1024
-        memory: 2000MB
-      - label: 8000@4000
-        rpmCapacity: 8000
+        memory: 2048MB
+      - label: 1350@4096
+        rpmCapacity: 1350
         cpuShares: 2048
-        memory: 4000MB
+        memory: 4096MB
+      - label: 2025@8192
+        rpmCapacity: 2025
+        cpuShares: 4096
+        memory: 8192MB

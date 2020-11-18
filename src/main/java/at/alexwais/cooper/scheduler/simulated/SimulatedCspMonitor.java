@@ -36,10 +36,15 @@ public class SimulatedCspMonitor implements Monitor {
 
 
     @Override
-    public MonitoringResult getCurrentLoad(int elapsedSeconds) {
+    public MonitoringResult getCurrentLoad(int elapsedSeconds) throws EndOfScenarioException {
         var elapsedMinutes = elapsedSeconds / 60;
-        while (elapsedMinutes >= loadFixture.peek().getMinutes()) {
+
+        while (loadFixture.peek() != null && elapsedMinutes >= loadFixture.peek().getMinutes()) {
             latestRecord = loadFixture.pop();
+        }
+
+        if (elapsedMinutes >= latestRecord.getMinutes() + 2) {
+            throw new EndOfScenarioException();
         }
 
         var externalServiceLoad = latestRecord.getExternalServiceLoad();

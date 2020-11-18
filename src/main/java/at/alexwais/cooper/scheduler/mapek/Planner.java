@@ -1,14 +1,19 @@
 package at.alexwais.cooper.scheduler.mapek;
 
+import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.genetic.FitnessFunction;
 import at.alexwais.cooper.genetic.GeneticAlgorithm;
 import at.alexwais.cooper.ilp.IlpOptimizer;
-import at.alexwais.cooper.scheduler.*;
+import at.alexwais.cooper.scheduler.MapUtils;
+import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.State;
+import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -23,6 +28,7 @@ public class Planner {
 
     private final Model model;
     private final Validator validator;
+    private final OptimizationConfig config;
     private final FitnessFunction fitnessFunction;
     private final GeneticAlgorithm geneticOptimizer;
     private final IlpOptimizer ilpOptimizer;
@@ -30,7 +36,7 @@ public class Planner {
     @Getter
     private final List<OptimizationResult> greedyOptimizations = new ArrayList<>();
     @Getter
-    private final List<OptimizationResult> geneticOptimizations = new ArrayList<>();
+    private final List<OptimizationResult> optimizations = new ArrayList<>();
 
 
     private static final float DRIFT_TOLERANCE = 2.0f; // percentage
@@ -50,12 +56,13 @@ public class Planner {
     }
 
 
-    public Planner(Model model, Validator validator) {
+    public Planner(Model model, Validator validator, OptimizationConfig config) {
         this.model = model;
         this.validator = validator;
+        this.config = config;
         this.fitnessFunction = new FitnessFunction(model, validator);
         this.geneticOptimizer = new GeneticAlgorithm(model, validator);
-        this.ilpOptimizer = new IlpOptimizer(model);
+        this.ilpOptimizer = new IlpOptimizer(model, config);
     }
 
     private ReallocationPlan currentReallocation = null;
@@ -137,16 +144,23 @@ public class Planner {
 //        var greedyResult = greedyOptimizer.optimize(state);
 //        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state.getCurrentSystemMeasures()));
 
-        var geneticResult = geneticOptimizer.optimize(previousAllocation, systemMeasures);
+        OptimizationResult optimizationResult = null;
 
-//        var ilpResult = ilpOptimizer.optimize(state);
-//        ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), state.getCurrentSystemMeasures()));
+        switch (config.getAlgorithm()) {
+            case GA:
+                var geneticResult = geneticOptimizer.optimize(previousAllocation, systemMeasures);
+                optimizationResult = geneticResult;
+                break;
+            case CPLEX:
+                var ilpResult = ilpOptimizer.optimize(previousAllocation, systemMeasures);
+                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), systemMeasures));
+                optimizationResult = ilpResult;
+                break;
+        }
 
 //        greedyOptimizations.add(greedyResult);
-        geneticOptimizations.add(geneticResult);
+        optimizations.add(optimizationResult);
 
-//        var optimizationResult = ilpResult;
-        var optimizationResult = geneticResult;
         if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, systemMeasures.getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }

@@ -2,15 +2,21 @@ package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.ConsoleTable;
 import at.alexwais.cooper.cloudsim.CloudSimRunner;
+import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
 import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
+import at.alexwais.cooper.scheduler.simulated.EndOfScenarioException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.MessageFormat;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +24,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class SchedulingLoop {
+public class SchedulingCycle {
 
     private final CloudProvider cloudProvider = new CloudSimRunner();
     private final Validator validator;
@@ -36,12 +42,9 @@ public class SchedulingLoop {
 
     private long currentClock = 0L; // seconds
 
-    private static final long MAX_RUNTIME = 1260L; // seconds
-    private static final long GRACE_PERIOD = 120L; // seconds
-
 
     @Autowired
-    public SchedulingLoop(Model model) {
+    public SchedulingCycle(Model model, OptimizationConfig config) {
         this.model = model;
         this.currentState = new State(model);
         this.currentState.setCurrentTargetAllocation(new Allocation(model));
@@ -49,41 +52,40 @@ public class SchedulingLoop {
         this.validator = new Validator(model);
 
         this.analyzer = new Analyzer(model);
-        this.planner = new Planner(model, validator);
+        this.planner = new Planner(model, validator, config);
         this.executor = new Executor(model);
     }
 
 
     public void run() {
-        cloudProvider.registerListener(new SchedulingListener());
+        var listener = new SchedulingListener();
+        cloudProvider.registerListener(listener);
         cloudProvider.run();
     }
 
     private void tearDown() {
-        var totalGeneticCost = planner.getGeneticOptimizations().stream()
+        var totalGeneticCost = planner.getOptimizations().stream()
                 .map(o -> o.getAllocation().getTotalCost())
                 .reduce(0f, Float::sum);
-        var totalGreedyCost = planner.getGreedyOptimizations().stream()
-                .map(o -> o.getAllocation().getTotalCost())
-                .reduce(0f, Float::sum);
+//        var totalGreedyCost = planner.getGreedyOptimizations().stream()
+//                .map(o -> o.getAllocation().getTotalCost())
+//                .reduce(0f, Float::sum);
 
-        var totalGeneticFitness = planner.getGeneticOptimizations().stream()
+        var totalGeneticFitness = planner.getOptimizations().stream()
                 .map(OptimizationResult::getFitness)
                 .reduce(0f, Float::sum);
-        var totalGreedyFitness = planner.getGreedyOptimizations().stream()
-                .map(OptimizationResult::getFitness)
-                .reduce(0f, Float::sum);
+//        var totalGreedyFitness = planner.getGreedyOptimizations().stream()
+//                .map(OptimizationResult::getFitness)
+//                .reduce(0f, Float::sum);
 
 //        var averageRuntime = planner.getGeneticOptimizations().stream()
 //                .mapToInt(o -> o.getRuntimeInMilliseconds().intValue())
 //                .average().getAsDouble();
 
-        log.info(" *** Total Genetic Cost: {}", totalGeneticCost);
-        log.info(" *** Total Greedy Cost: {}", totalGreedyCost);
-        log.info(" ***");
-        log.info(" *** Total Genetic Fitness: {}", totalGeneticFitness);
-        log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
-        log.info(" ***");
+        log.info(" *** Total Cost: {}", totalGeneticCost);
+//        log.info(" *** Total Greedy Cost: {}", totalGreedyCost);
+        log.info(" *** Total Fitness: {}", totalGeneticFitness);
+//        log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
 //        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
     }
 
@@ -94,13 +96,17 @@ public class SchedulingLoop {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
             currentClock = clock;
-            log.info("\n\n########### Cooper Scheduling Cycle ########### at {}s ", currentClock);
-            if (clock >= MAX_RUNTIME) {
-                scheduler.abort();
-            }
 
-            // The final (drained) target allocation will be enforced after the current cycle completed
-            // A new Optimization may take place immediately after grace period (with containers/VMs still running)
+            var secondsPerMinute = new BigDecimal(60);
+            var plainSeconds = new BigDecimal(currentClock);
+            var minutes = plainSeconds.divide(secondsPerMinute, RoundingMode.FLOOR);
+            var seconds = plainSeconds.remainder(secondsPerMinute);
+            var elapsedTime = MessageFormat.format("{0,number,#00}:{1,number,#00}", minutes, seconds);
+
+            log.info("\n\n########### Cooper Scheduling Cycle @ {} ###########", elapsedTime);
+
+            // The final (drained) target allocation will be enforced after the current cycle completed.
+            // A new Optimization may take place immediately after grace period (with containers/VMs still running).
             if (drainedTargetAllocation != null) {
                 log.info("Applying final target allocation after draining period...");
                 executor.execute(scheduler, drainedTargetAllocation, currentState);
@@ -108,8 +114,15 @@ public class SchedulingLoop {
                 drainedTargetAllocation = null;
             }
 
-            monitor();
+            var terminating = false;
+            try {
+                monitor();
+            } catch (EndOfScenarioException e) {
+                terminating = true;
+            }
             analyze();
+
+            printServiceLoad();
 
             var executionPlan = planner.plan(currentState);
 
@@ -127,10 +140,11 @@ public class SchedulingLoop {
                 // log.info("No reallocation performed!");
             }
 
-            printServiceLoad();
+
             printAllocationStatus();
 
-            if (clock >= MAX_RUNTIME) {
+            if (terminating) {
+                scheduler.abort();
                 tearDown();
             }
         }
@@ -141,7 +155,7 @@ public class SchedulingLoop {
         }
     }
 
-    private void monitor() {
+    private void monitor() throws EndOfScenarioException {
         var measuredLoad = monitor.getCurrentLoad((int) currentClock);
         currentState.setCurrentSystemMeasures(new SystemMeasures(model, measuredLoad, currentState.getCurrentTargetAllocation()));
     }
@@ -154,7 +168,7 @@ public class SchedulingLoop {
 
     private void printServiceLoad() {
         System.out.println();
-        System.out.println("Service Load:");
+        System.out.println("Service Load before adaption:");
         System.out.println();
         var serviceCapacity = currentState.getCurrentTargetAllocation().getServiceCapacity();
         var table = new ConsoleTable("Service", "Load", "Capacity");

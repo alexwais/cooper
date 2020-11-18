@@ -2,10 +2,10 @@ package at.alexwais.cooper.genetic;
 
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
-import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;

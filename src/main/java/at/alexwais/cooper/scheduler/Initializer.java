@@ -15,7 +15,7 @@ import org.jgrapht.graph.WeightedPseudograph;
 
 public class Initializer {
 
-    private static final int INSTANCE_COUNT = 20;
+    private static final int INSTANCE_COUNT = 10;
 
 
     @Getter

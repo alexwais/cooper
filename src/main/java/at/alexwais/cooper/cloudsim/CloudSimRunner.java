@@ -50,7 +50,7 @@ public class CloudSimRunner implements CloudProvider {
 
 
     private boolean terminationRequested = false;
-    private double prevTick = 0d;
+    private double prevTick = -1d;
     private Map<Listener, Long> invokedClockTicks = new HashMap<>();
     private Scheduler scheduler = new CloudSimScheduler();
 
@@ -68,6 +68,7 @@ public class CloudSimRunner implements CloudProvider {
 
         // Creates a Datacenter with a list of Hosts.
         // Uses a VmAllocationPolicySimple by default to allocate VMs
+        // FIXME dynamic datacenters?
         datacenters.put("DC-1", createDatacenter(1024, 1024));
         datacenters.put("DC-2", createDatacenter(1024, 1024));
 
@@ -150,6 +151,7 @@ public class CloudSimRunner implements CloudProvider {
     }
 
     private Vm launchVm(String type, String datacenter) {
+        // FIXME dynamic vm types?
         var vmType = vmTypeConfiguration.getVmTypes().get(type);
         var vm = new VmSimple(1024, vmType.getCpu());
         vm.setRam(vmType.getRam()).setBw(1000).setSize(1000);

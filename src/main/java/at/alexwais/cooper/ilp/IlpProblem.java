@@ -1,8 +1,9 @@
 package at.alexwais.cooper.ilp;
 
+import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.dto.Allocation;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import ilog.concert.IloException;
 import ilog.cplex.IloCplex;
 import java.util.ArrayList;
@@ -17,20 +18,21 @@ public class IlpProblem {
     private final Allocation previousAllocation;
     private final SystemMeasures systemMeasures;
 
+    private final OptimizationConfig config;
+
     private final IloCplex cplex;
     private final Variables variables;
 
-    private static final boolean ENABLE_COLOCATION = true;
 
-
-    public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures) {
+    public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures, OptimizationConfig config) {
         this.model = model;
+        this.config = config;
         this.previousAllocation = previousAllocation;
         this.systemMeasures = systemMeasures;
 
         try {
             this.cplex = new IloCplex();
-            variables = new Variables(model, cplex, ENABLE_COLOCATION);
+            variables = new Variables(model, cplex, config.isEnableColocation());
             buildObjectiveFunction();
             buildConstraints();
         } catch (IloException e) {
@@ -77,7 +79,7 @@ public class IlpProblem {
             objectiveTerm1.addTerm(k.getType().getCost(), vmAllocationVariable);
 
             var vmGracePeriodVariable = variables.getVmGracePeriodVariable(k);
-            objectiveTerm2.addTerm(k.getType().getCost(), vmGracePeriodVariable);
+            objectiveTerm2.addTerm(k.getType().getCost() + 0.01, vmGracePeriodVariable); // TODO constant for grace period cost?
         }
 
         var objectiveTerm3 = cplex.linearNumExpr();
@@ -131,7 +133,7 @@ public class IlpProblem {
                 cplex.prod(objectiveTerm2, 0.2),
                 cplex.prod(objectiveTerm4, 0.000001)
         );
-        if (ENABLE_COLOCATION) {
+        if (config.isEnableColocation()) {
             objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, 0.001));
         }
 
@@ -317,13 +319,29 @@ public class IlpProblem {
             cplex.addLe(leftSide, rightSide);
         }
 
+        // new constraint TODO
+        for (var k : model.getVms().values()) {
+            var sum = cplex.linearNumExpr();
+            for (var c : model.getContainerTypes()) {
+                var decisionVariable = variables.getDecisionVariable(c, k);
+                sum.addTerm(1, decisionVariable);
+            }
+
+            var vmAllocatedVariable = variables.getVmAllocationVariable(k);
+            var leftSide = cplex.linearNumExpr();
+            leftSide.add(sum);
+            leftSide.addTerm(-1, vmAllocatedVariable);
+
+            cplex.addGe(leftSide, 0);
+        }
+
 
         // Constraint 4.15
         for (var k : model.getVms().values()) {
             var leftSide = variables.getVmGracePeriodVariable(k);
 
             var rightSide = cplex.linearNumExpr();
-            var isPreviouslyLeased = previousAllocation.getRunningVms().contains(k); // beta_k
+            var isPreviouslyLeased = previousAllocation.getUsedVms().contains(k); // beta_k
             var vmAllocatedVariable = variables.getVmAllocationVariable(k);
 
             if (isPreviouslyLeased) {
@@ -337,7 +355,7 @@ public class IlpProblem {
         }
 
 
-        if (ENABLE_COLOCATION) {
+        if (config.isEnableColocation()) {
             for (var wrapper : variables.getConcurrentAllocationVariables()) {
                 var decisionVariable1 = variables.getDecisionVariable(wrapper.getC1(), wrapper.getK1());
                 var decisionVariable2 = variables.getDecisionVariable(wrapper.getC2(), wrapper.getK2());

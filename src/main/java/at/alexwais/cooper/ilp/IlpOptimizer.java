@@ -1,10 +1,11 @@
 package at.alexwais.cooper.ilp;
 
+import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
-import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import ilog.cplex.IloCplex;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
@@ -14,9 +15,11 @@ import org.springframework.util.StopWatch;
 public class IlpOptimizer implements Optimizer {
 
     private final Model model;
+    private final OptimizationConfig config;
 
-    public IlpOptimizer(Model model) {
+    public IlpOptimizer(Model model, OptimizationConfig config) {
         this.model = model;
+        this.config = config;
     }
 
 
@@ -24,7 +27,7 @@ public class IlpOptimizer implements Optimizer {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
-        var problem = new IlpProblem(model, previousAllocation, systemMeasures);
+        var problem = new IlpProblem(model, previousAllocation, systemMeasures, config);
 
         var params = new IloCplex.ParameterSet();
 //        params.setParam(IloCplex.DoubleParam.MIP.Tolerances.MIPGap, 0.00000000000000000000000000000001);

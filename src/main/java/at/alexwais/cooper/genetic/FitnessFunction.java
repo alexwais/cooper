@@ -1,9 +1,9 @@
 package at.alexwais.cooper.genetic;
 
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.SystemMeasures;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

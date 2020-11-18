@@ -1,8 +1,7 @@
-package at.alexwais.cooper.scheduler;
+package at.alexwais.cooper.scheduler.dto;
 
 import at.alexwais.cooper.domain.Service;
-import at.alexwais.cooper.scheduler.dto.Allocation;
-import at.alexwais.cooper.scheduler.dto.MonitoringResult;
+import at.alexwais.cooper.scheduler.Model;
 import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

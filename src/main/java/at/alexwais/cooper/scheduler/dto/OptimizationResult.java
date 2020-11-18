@@ -3,7 +3,6 @@ package at.alexwais.cooper.scheduler.dto;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.SystemMeasures;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;

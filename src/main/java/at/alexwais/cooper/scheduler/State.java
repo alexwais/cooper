@@ -4,6 +4,7 @@ import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

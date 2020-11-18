@@ -4,7 +4,7 @@ import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.SystemMeasures;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.Genotype;
 import io.jenetics.util.ISeq;
 import java.util.ArrayList;
