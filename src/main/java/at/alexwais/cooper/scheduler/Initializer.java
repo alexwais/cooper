@@ -15,8 +15,7 @@ import org.jgrapht.graph.WeightedPseudograph;
 
 public class Initializer {
 
-    private static final int INSTANCE_COUNT = 10;
-
+    private int instanceCount;
 
     @Getter
     private List<DataCenter> dataCenters = new ArrayList<>();
@@ -27,7 +26,8 @@ public class Initializer {
     @Getter
     private WeightedPseudograph<String, DefaultWeightedEdge> dataCenterDistanceGraph;
 
-    public Initializer(DataCenterConfigMap dataCenterConfig, DataCenterDistanceConfigList distanceConfig, ServiceConfigMap serviceConfig) {
+    public Initializer(int multiplicator, DataCenterConfigMap dataCenterConfig, DataCenterDistanceConfigList distanceConfig, ServiceConfigMap serviceConfig) {
+        this.instanceCount = 2 * multiplicator;
         initDataCenters(dataCenterConfig);
         initServices(serviceConfig);
         initDownstreamRequestMultiplier(serviceConfig);
@@ -70,7 +70,7 @@ public class Initializer {
                 var vmType = new VmType(t.getLabel(), t.getCpuCores(), (int) t.getMemory().toMegabytes(), t.getCost(), dc);
                 dc.getVmTypes().add(vmType);
 
-                var instanceCount = dc.isOnPremise() ? t.getCount() : INSTANCE_COUNT;
+                var instanceCount = dc.isOnPremise() ? t.getCount() : this.instanceCount;
 
                 var instances = new ArrayList<VmInstance>();
                 for (int j = 0; j < instanceCount; j++) {

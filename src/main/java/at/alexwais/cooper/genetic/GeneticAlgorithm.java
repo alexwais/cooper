@@ -1,5 +1,7 @@
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.domain.ContainerType;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.Validator;
@@ -10,6 +12,11 @@ import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
@@ -20,7 +27,7 @@ public class GeneticAlgorithm implements Optimizer {
     private final Model model;
 //    private final State state;
 //    private final Mapping mapping;
-    // private final Validator validator;
+     private final Validator validator;
     private final FitnessFunction fitnessFunction;
 
     // private final RetryConstraint<BitGene, Float> constraint;
@@ -35,6 +42,7 @@ public class GeneticAlgorithm implements Optimizer {
 //                .map(mapping::optimizationResultToGenotype)
 //                .collect(Collectors.toList());
 
+        this.validator = validator;
         this.fitnessFunction = new FitnessFunction(model, validator);
 
 //        flatCodec = Codec.of(mapping.flatGenotypeFactory(), mapping::flatDecoder);
@@ -79,7 +87,9 @@ public class GeneticAlgorithm implements Optimizer {
                 .build();
 
         var phenotype = engine1.stream()
-                .limit(250)
+                // ate least 250 generations AND a valid result must be found
+                .limit(new ValidatedGenerationLimit(250, mapping, allocationMap ->
+                        validator.isAllocationValid(new Allocation(model, allocationMap), previousAllocation, systemMeasures.getTotalServiceLoad())))
                 .collect(EvolutionResult.toBestPhenotype());
 
         log.debug("Result fitness: {}", phenotype.fitness());
@@ -88,6 +98,50 @@ public class GeneticAlgorithm implements Optimizer {
 
         stopWatch.stop();
         return new OptimizationResult(model, systemMeasures, decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
+    }
+
+
+    final class ValidatedGenerationLimit implements Predicate<EvolutionResult<DistributedIntegerGene, Float>>  {
+        private final long generations;
+        private final Function<Map<VmInstance, List<ContainerType>>, Boolean> validator;
+        private final Mapping mapping;
+
+        ValidatedGenerationLimit(final long generations, final Mapping mapping, final Function<Map<VmInstance, List<ContainerType>>, Boolean> validator) {
+            this.generations = generations;
+            this.mapping = mapping;
+            this.validator = validator;
+        }
+
+        private final AtomicLong _current = new AtomicLong();
+        private boolean extraRound = false;
+
+        @Override
+        public boolean test(final EvolutionResult<DistributedIntegerGene, Float> evolutionResult) {
+            var bestPhenotype = evolutionResult.bestPhenotype();
+            var decodedAllocationMapping = mapping.serviceRowSquareDecoder(bestPhenotype.genotype());
+
+            var minimumGenerationNotReached = _current.incrementAndGet() <= generations;
+            if (minimumGenerationNotReached) {
+                return true;
+            }
+
+            var invalidResult = !validator.apply(decodedAllocationMapping);
+            if (invalidResult) {
+                log.warn("No valid result after {} generations! Continuing...", _current.get());
+                extraRound = true;
+                return true;
+            } else {
+                // we need to add an extra generation after a valid phenotype has been found,
+                // otherwise the result won't make it collect() step of the stream...
+                if (extraRound) {
+                    extraRound = false;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
     }
 
 

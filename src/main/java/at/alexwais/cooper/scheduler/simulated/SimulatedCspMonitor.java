@@ -23,7 +23,7 @@ public class SimulatedCspMonitor implements Monitor {
     private LoadRecord latestRecord;
 
     @Autowired
-    public SimulatedCspMonitor(Model model, @Value("${loadFixture}") String loadFixtureFilename) {
+    public SimulatedCspMonitor(Model model, @Value("${cooper.loadFixture}") String loadFixtureFilename) {
         this.model = model;
         var loader = new CsvLoader(model);
         var loadRecords = loader.load(loadFixtureFilename);
