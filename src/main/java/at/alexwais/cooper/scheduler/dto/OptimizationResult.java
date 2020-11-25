@@ -15,6 +15,7 @@ public class OptimizationResult {
     private Allocation allocation;
     private SystemMeasures underlyingMeasures;
     private Float fitness;
+    private Float neutralFitness;
     private Long runtimeInMilliseconds;
 
 

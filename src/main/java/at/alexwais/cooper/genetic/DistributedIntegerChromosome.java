@@ -137,10 +137,9 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 	 * @throws IllegalArgumentException if the length of the genes array is
 	 *         empty or the given {@code genes} doesn't have the same range.
 	 */
-//	public static DistributedIntegerChromosome of(final IntegerGene... genes) {
-//		checkGeneRange(Stream.of(genes).map(IntegerGene::range));
-//		return new DistributedIntegerChromosome(ISeq.of(genes), IntRange.of(genes.length));
-//	}
+	public static DistributedIntegerChromosome of(final DistributedIntegerGene[] genes, final EnumeratedIntegerDistribution distribution) {
+		return new DistributedIntegerChromosome(ISeq.of(genes), distribution, genes.length);
+	}
 
 	/**
 	 * Create a new {@code IntegerChromosome} with the given genes.
@@ -182,6 +181,19 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 		final ISeq<DistributedIntegerGene> values = DistributedIntegerGene.seq(distribution, length);
 		return new DistributedIntegerChromosome(values, distribution, length);
 	}
+
+	public static DistributedIntegerChromosome of(
+			final int[] allele,
+			final EnumeratedIntegerDistribution distribution,
+			final int length
+	) {
+		for (int v : allele) {
+			var gene = DistributedIntegerGene.of(v, distribution);
+		}
+		final ISeq<DistributedIntegerGene> values = DistributedIntegerGene.seq(distribution, length);
+		return new DistributedIntegerChromosome(values, distribution, length);
+	}
+
 
 	@Override
 	public DistributedIntegerGene get(int index) {

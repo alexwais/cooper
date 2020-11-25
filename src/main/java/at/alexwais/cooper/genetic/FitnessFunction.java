@@ -14,7 +14,15 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
-    public float eval(Allocation resourceAllocation, SystemMeasures measures) {
+
+    /**
+     * Ignores the previous allocation (w.r.t. grace period cost and overallocation constraints), constituting
+     * a comparable measure over time (i.e., this neutral fitness stays comparable even when the "previous allocation" changes over time)
+     * @param resourceAllocation
+     * @param measures
+     * @return
+     */
+    public float evalNeutral(Allocation resourceAllocation, SystemMeasures measures) {
         return eval(resourceAllocation, null, measures);
     }
 
@@ -24,7 +32,8 @@ public class FitnessFunction {
 
         // Term 2 - Grace Period Cost
         // TODO use running vs. used VMs?
-        var gracePeriodCost = measures.getCurrentAllocation().getUsedVms().stream()
+        var gracePeriodCost = previousAllocation == null ? 0 :
+                previousAllocation.getUsedVms().stream()
                 .filter(vm -> !resourceAllocation.getUsedVms().contains(vm))
                 .map(vm -> vm.getType().getCost())
                 .reduce(0f, Float::sum);
@@ -39,9 +48,12 @@ public class FitnessFunction {
                 var containerB = allocationInstanceB.getContainer();
 
                 var distance = model.getDistanceBetween(vmA, vmB);
-                if (distance > 0) { // prevent division by zero
-                    var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
+                var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
+                if (distance > 0) {
                     distanceBonus -= (affinity / distance);
+                } else {
+                    // prevent division by zero
+                    distanceBonus -= affinity;
                 }
             }
         }
@@ -71,7 +83,7 @@ public class FitnessFunction {
 
         var w_cost = 100;
         var w_gradePeriodWaste = 50;
-        var w_distance = 100;
+        var w_distance = 0.1f;
         var w_overProvisioning = 1;
 
         var term1_cost = totalCost * w_cost;
@@ -82,7 +94,6 @@ public class FitnessFunction {
         var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning
                 + violations * 10_000_000f;
 
-//        var fitness = totalCost * 100 - affinityBonus * 100 + overProvisionedCapacity + violations * 10_000_000f; // - containersOnSameVm * 100;
         return fitness;
     }
 

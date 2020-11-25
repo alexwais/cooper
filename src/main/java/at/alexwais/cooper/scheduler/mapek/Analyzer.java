@@ -60,10 +60,10 @@ public class Analyzer {
             return 0f;
         }
 
-        var currentFitness = fitnessFunction.eval(measures.getCurrentAllocation(), measures);
-        var previousFitness = lastOptimization.getFitness(); // FIXME use neutral fitness which ignores prev. allocation to determine the drift!
+        var currentFitness = fitnessFunction.evalNeutral(measures.getCurrentAllocation(), measures);
+        var previousFitness = lastOptimization.getNeutralFitness();
         var fitnessChangePercentage = calculatePercentageChange(currentFitness, previousFitness);
-        log.debug("change: {}%", fitnessChangePercentage);
+        log.debug("Neutral fitness change: {}%", fitnessChangePercentage);
         return fitnessChangePercentage;
     }
 

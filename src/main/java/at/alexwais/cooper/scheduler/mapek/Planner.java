@@ -153,10 +153,13 @@ public class Planner {
                 break;
             case CPLEX:
                 var ilpResult = ilpOptimizer.optimize(previousAllocation, systemMeasures);
-                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), systemMeasures));
+                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, systemMeasures));
                 optimizationResult = ilpResult;
                 break;
         }
+
+        var neutralFitness = fitnessFunction.evalNeutral(optimizationResult.getAllocation(), systemMeasures);
+        optimizationResult.setNeutralFitness(neutralFitness);
 
 //        greedyOptimizations.add(greedyResult);
         optimizations.add(optimizationResult);

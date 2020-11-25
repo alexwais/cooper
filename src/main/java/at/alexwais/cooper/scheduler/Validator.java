@@ -1,8 +1,10 @@
 package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.domain.ContainerType;
+import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.dto.Allocation;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,105 +24,98 @@ public class Validator {
 
     public int violations(Allocation resourceAllocation, Allocation previousAllocation, Map<String, Integer> serviceLoad) {
         var violations = 0;
-
-        // Validate VMs are not overloaded
-        for (Map.Entry<VmInstance, List<ContainerType>> e : resourceAllocation.getAllocationMap().entrySet()) {
-            var vm = e.getKey();
-            var containers = e.getValue();
-            var previousContainers = previousAllocation.getAllocatedContainersOnVm(vm).stream()
-                    .map(Allocation.AllocationTuple::getContainer)
-                    .collect(Collectors.toList());
-            var isOverallocated = isVmOverallocated(vm, containers, previousContainers);
-            if (isOverallocated) {
-                violations++;
-            }
-        }
-
-        // Validate Services are not underprovisioned
-        for (Map.Entry<String, Integer> entry : serviceLoad.entrySet()) {
-            var serviceName = entry.getKey();
-            var load = entry.getValue();
-            var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
-            if (capacity < load) {
-                violations += load - capacity;
-                // violations++;
-            }
-        }
-
+        violations += calcOverallocatedVmViolations(resourceAllocation, previousAllocation);
+        violations += calcServiceUnderprovisioningViolations(resourceAllocation, serviceLoad);
         return violations;
     }
-
 
     public int neutralViolations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
         var violations = 0;
+        violations += calcOverallocatedVmViolations(resourceAllocation, null);
+        violations += calcServiceUnderprovisioningViolations(resourceAllocation, serviceLoad);
+        return violations;
+    }
 
-        // Validate VMs are not overloaded
+    public int calcOverallocatedVmViolations(Allocation resourceAllocation, Allocation previousAllocation) {
+        var violations = 0;
         for (Map.Entry<VmInstance, List<ContainerType>> e : resourceAllocation.getAllocationMap().entrySet()) {
             var vm = e.getKey();
             var containers = e.getValue();
-            var isOverallocated = isVmOverallocatedNeutral(vm, containers);
+
+            Boolean isOverallocated;
+            if (previousAllocation == null) { // ignore previous allocation -> get neutral violations
+                isOverallocated = isVmOverallocated(vm, containers, null);
+            } else {
+                var previousContainers = previousAllocation.getAllocatedContainersOnVm(vm).stream()
+                        .map(Allocation.AllocationTuple::getContainer)
+                        .collect(Collectors.toList());
+                isOverallocated = isVmOverallocated(vm, containers, previousContainers);
+            }
+
             if (isOverallocated) {
                 violations++;
             }
         }
+        return violations;
+    }
 
-        // Validate Services are not underprovisioned
+    public boolean isVmOverallocated(VmInstance vm, List<ContainerType> containers, List<ContainerType> previousContainers) {
+        var cpuCapacity = vm.getType().getCpuCores() * 1024;
+        var memoryCapacity = vm.getType().getMemory();
+
+        var allocatedCpuPerService = containers.stream()
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
+        var allocatedMemoryPerService = containers.stream()
+                .collect(Collectors.toMap(ContainerType::getService, c -> c.getMemory().toMegabytes()));
+
+        var abandonedCpuPerService = previousContainers == null ? new HashMap<Service, Integer>() : previousContainers.stream()
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
+        var abandonedMemoryPerService = previousContainers == null ? new HashMap<Service, Long>() : previousContainers.stream()
+                .collect(Collectors.toMap(ContainerType::getService, c -> c.getMemory().toMegabytes()));
+
+        var totalCpu = model.getServices().values().stream()
+                .map(s -> Math.max(allocatedCpuPerService.getOrDefault(s, 0), abandonedCpuPerService.getOrDefault(s, 0)))
+                .reduce(0, Integer::sum);
+        var totalMemory = model.getServices().values().stream()
+                .map(s -> Math.max(allocatedMemoryPerService.getOrDefault(s, 0L), abandonedMemoryPerService.getOrDefault(s, 0L)))
+                .reduce(0L, Long::sum);
+
+        var hasEnoughCpuAvailable = totalCpu <= cpuCapacity;
+        var hasEnoughMemoryAvailable = totalMemory <= memoryCapacity;
+
+        return !hasEnoughCpuAvailable || !hasEnoughMemoryAvailable;
+    }
+
+    private int calcServiceUnderprovisioningViolations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
+        var violations = 0;
         for (Map.Entry<String, Integer> entry : serviceLoad.entrySet()) {
             var serviceName = entry.getKey();
             var load = entry.getValue();
             var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
             if (capacity < load) {
                 violations += load - capacity;
-                // violations++;
+//                violations++;
             }
         }
-
         return violations;
     }
 
-    private static boolean isVmOverallocated(VmInstance vm, List<ContainerType> containers, List<ContainerType> previousContainers) {
-        var allocatedServices = containers.stream().map(ContainerType::getService).collect(Collectors.toList());
 
-        var cpuCapacity = vm.getType().getCpuCores() * 1024;
-        var memoryCapacity = vm.getType().getMemory();
 
-        var allocatedCpu = containers.stream()
-                .map(ContainerType::getCpuShares)
-                .reduce(0, Integer::sum);
-        var allocatedMemory = containers.stream()
-                .map(t -> t.getMemory().toMegabytes())
-                .reduce(0L, Long::sum);
-
-        var abandonedCpu = previousContainers.stream()
-                .filter(c -> !allocatedServices.contains(c.getService()))
-                .map(ContainerType::getCpuShares)
-                .reduce(0, Integer::sum);
-        var abandonedMemory = previousContainers.stream()
-                .filter(c -> !allocatedServices.contains(c.getService()))
-                .map(t -> t.getMemory().toMegabytes())
-                .reduce(0L, Long::sum);
-
-        var hasEnoughCpuAvailable = allocatedCpu + abandonedCpu <= cpuCapacity;
-        var hasEnoughMemoryAvailable = allocatedMemory + abandonedMemory <= memoryCapacity;
-
-        return !hasEnoughCpuAvailable || !hasEnoughMemoryAvailable;
-    }
-
-    private static boolean isVmOverallocatedNeutral(VmInstance vm, List<ContainerType> containers) {
-        var cpuCapacity = vm.getType().getCpuCores() * 1024;
-        var memoryCapacity = vm.getType().getMemory();
-
-        var allocatedCpu = containers.stream()
-                .map(ContainerType::getCpuShares)
-                .reduce(0, Integer::sum);
-        var allocatedMemory = containers.stream()
-                .map(t -> t.getMemory().toMegabytes())
-                .reduce(0L, Long::sum);
-
-        var hasEnoughCpuAvailable = allocatedCpu <= cpuCapacity;
-        var hasEnoughMemoryAvailable = allocatedMemory <= memoryCapacity;
-
-        return !hasEnoughCpuAvailable || !hasEnoughMemoryAvailable;
+    public Map<Service, Long> missingCapacityPerService(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
+        return serviceLoad.entrySet().stream()
+                .collect(Collectors.toMap(e -> model.getServices().get(e.getKey()),
+                        e -> {
+                            var serviceName = e.getKey();
+                            var load = e.getValue();
+                            var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
+                            if (capacity < load) {
+                                return load - capacity;
+                            } else {
+                                return 0L;
+                            }
+                        }
+                ));
     }
 
 }
