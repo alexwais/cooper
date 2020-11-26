@@ -60,25 +60,25 @@ public class Validator {
     }
 
     public boolean isVmOverallocated(VmInstance vm, List<ContainerType> containers, List<ContainerType> previousContainers) {
-        var cpuCapacity = vm.getType().getCpuCores() * 1024;
+        var cpuCapacity = vm.getType().getCpuUnits();
         var memoryCapacity = vm.getType().getMemory();
 
         var allocatedCpuPerService = containers.stream()
                 .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
         var allocatedMemoryPerService = containers.stream()
-                .collect(Collectors.toMap(ContainerType::getService, c -> c.getMemory().toMegabytes()));
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getMemory));
 
         var abandonedCpuPerService = previousContainers == null ? new HashMap<Service, Integer>() : previousContainers.stream()
                 .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
-        var abandonedMemoryPerService = previousContainers == null ? new HashMap<Service, Long>() : previousContainers.stream()
-                .collect(Collectors.toMap(ContainerType::getService, c -> c.getMemory().toMegabytes()));
+        var abandonedMemoryPerService = previousContainers == null ? new HashMap<Service, Integer>() : previousContainers.stream()
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getMemory));
 
         var totalCpu = model.getServices().values().stream()
                 .map(s -> Math.max(allocatedCpuPerService.getOrDefault(s, 0), abandonedCpuPerService.getOrDefault(s, 0)))
                 .reduce(0, Integer::sum);
         var totalMemory = model.getServices().values().stream()
-                .map(s -> Math.max(allocatedMemoryPerService.getOrDefault(s, 0L), abandonedMemoryPerService.getOrDefault(s, 0L)))
-                .reduce(0L, Long::sum);
+                .map(s -> Math.max(allocatedMemoryPerService.getOrDefault(s, 0), abandonedMemoryPerService.getOrDefault(s, 0)))
+                .reduce(0, Integer::sum);
 
         var hasEnoughCpuAvailable = totalCpu <= cpuCapacity;
         var hasEnoughMemoryAvailable = totalMemory <= memoryCapacity;

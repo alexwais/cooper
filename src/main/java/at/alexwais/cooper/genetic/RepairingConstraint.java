@@ -24,11 +24,11 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
     private final Model model;
     private final SystemMeasures measures;
     private final Validator validator;
-    private final Mapping mapping;
+    private final ChromosomeMapping mapping;
     private final Allocation previousAllocation;
 
 
-    public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final Mapping mapping, final Allocation previousAllocation) {
+    public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final ChromosomeMapping mapping, final Allocation previousAllocation) {
         this.model = model;
         this.measures = measures;
         this.validator = validator;
@@ -41,7 +41,9 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
     public boolean test(final Phenotype<DistributedIntegerGene, Float> individual) {
         var genotype = individual.genotype();
         var allocationToTest = new Allocation(model, mapping.serviceRowSquareDecoder(genotype));
-        // only consider overallocation
+
+        // TODO test overalloc vs. underprovisioning vs. both
+        // for now only consider overallocation...
         var valid = validator.calcOverallocatedVmViolations(allocationToTest, previousAllocation) == 0;
 //        var valid = validator.isAllocationValid(allocationToTest, previousAllocation, measures.getTotalServiceLoad());
         return valid;
@@ -83,9 +85,6 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 				repairedAllocation.put(vm, repairedContainers);
 			}
         }
-
-        var excessBeforeMoving = containersToMove.size();
-
 
         // calc capacity of containers to move
         var containersToMoveByService = new HashMap<Service, List<ContainerType>>();
@@ -159,38 +158,13 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
             containersToAllocate = remainingContainers;
         }
 
-
-//        // Try allocating on (any other) VMs
-//        for (var vm: otherVms) {
-//            var allocatedContainers = new ArrayList<ContainerType>();
-//
-//            var remainingContainers = tryToFitContainersOnVm(vm, allocatedContainers, containersToAllocate);
-//
-//            if (!allocatedContainers.isEmpty()) {
-//                repairedAllocation.put(vm, allocatedContainers);
-//            }
-//            containersToAllocate = remainingContainers;
-//        }
-
-
 //        log.debug("Remaining excess containers after reparation: {} (moved {})", excessContainers.size(), excessBeforeMoving);
-
-        if (!validator.isAllocationValid(new Allocation(model, repairedAllocation), previousAllocation, measures.getTotalServiceLoad())) {
-            log.warn("Invalid!");
-        }
-
+//        if (!validator.isAllocationValid(new Allocation(model, repairedAllocation), previousAllocation, measures.getTotalServiceLoad())) {
+//            log.warn("Invalid!");
+//        }
 
         var gt = mapping.serviceRowSquareEncoder(repairedAllocation);
         var pt = Phenotype.<DistributedIntegerGene, Float>of(gt, generation);
-
-
-//        var allocationToTest = new Allocation(model, mapping.serviceRowSquareDecoder(gt));
-
-
-//		if (!test(pt)) {
-//			test(pt);
-//			throw new IllegalStateException("Repair failed!");
-//		}
 
         return pt;
     }

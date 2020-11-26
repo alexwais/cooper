@@ -79,7 +79,7 @@ public class IlpProblem {
             objectiveTerm1.addTerm(k.getType().getCost(), vmAllocationVariable);
 
             var vmGracePeriodVariable = variables.getVmGracePeriodVariable(k);
-            objectiveTerm2.addTerm(k.getType().getCost() + 0.01, vmGracePeriodVariable); // TODO constant for grace period cost?
+            objectiveTerm2.addTerm(k.getType().getCost() + 0.01, vmGracePeriodVariable); // TODO constraint for grace period cost? (like for vmAllocationVariable)
         }
 
         var objectiveTerm3 = cplex.linearNumExpr();
@@ -170,7 +170,7 @@ public class IlpProblem {
                 }
 
                 var rightSide = cplex.linearNumExpr();
-                var suppliedResources = v.getCpuCores() * 1024; // TODO
+                var suppliedResources = v.getCpuUnits();
                 var vmAllocationVariable = variables.getVmAllocationVariable(kv);
                 rightSide.addTerm(suppliedResources, vmAllocationVariable);
 
@@ -269,7 +269,7 @@ public class IlpProblem {
                 var rightSide = cplex.linearNumExpr();
                 for (var cs : s.getContainerTypes()) {
                     var decisionVariable = variables.getDecisionVariable(cs, k);
-                    var memUsage = cs.getMemory().toMegabytes(); // U_{c_s}^{MEM}
+                    var memUsage = cs.getMemory(); // U_{c_s}^{MEM}
                     rightSide.addTerm(decisionVariable, memUsage);
                 }
 
@@ -287,7 +287,7 @@ public class IlpProblem {
                 var rightSideSum = 0;
                 for (var cs : s.getContainerTypes()) {
                     var isPreviouslyAllocated = previousAllocation.isAllocated(cs, k); // z_{cs,k}
-                    var memUsage = cs.getMemory().toMegabytes(); // U_{c_s}^{MEM}
+                    var memUsage = cs.getMemory(); // U_{c_s}^{MEM}
                     if (isPreviouslyAllocated) {
                         rightSideSum += memUsage;
                     }

@@ -205,7 +205,7 @@ public class LegacyMapping {
         var overallCapacityForService = service.getContainerTypes().stream()
                 .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
                 .reduce(0L, Long::sum);
-        var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?
+        var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService;
 
 //        var containerTypeCapacity = containerType.getRpmCapacity() * vmCount;
 //        var shareOfContainerTypeInOverallCapacity = containerTypeCapacity / (double) overallCapacityForService;

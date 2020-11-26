@@ -41,7 +41,7 @@ public class SchedulingCycle {
     private final State currentState;
 
     private long currentClock = 0L; // seconds
-
+    private Allocation drainedTargetAllocation;
 
     @Autowired
     public SchedulingCycle(Model model, OptimizationConfig config) {
@@ -90,20 +90,12 @@ public class SchedulingCycle {
     }
 
 
-    private Allocation drainedTargetAllocation;
-
     class SchedulingListener implements Listener {
         @Override
         public void cycleElapsed(long clock, Scheduler scheduler) {
             currentClock = clock;
 
-            var secondsPerMinute = new BigDecimal(60);
-            var plainSeconds = new BigDecimal(currentClock);
-            var minutes = plainSeconds.divide(secondsPerMinute, RoundingMode.FLOOR);
-            var seconds = plainSeconds.remainder(secondsPerMinute);
-            var elapsedTime = MessageFormat.format("{0,number,#00}:{1,number,#00}", minutes, seconds);
-
-            log.info("\n\n########### Cooper Scheduling Cycle @ {} ###########", elapsedTime);
+            logCycleTimestamp();
 
             // The final (drained) target allocation will be enforced after the current cycle completed.
             // A new Optimization may take place immediately after grace period (with containers/VMs still running).
@@ -112,6 +104,8 @@ public class SchedulingCycle {
                 executor.execute(scheduler, drainedTargetAllocation, currentState);
                 currentState.setCurrentTargetAllocation(drainedTargetAllocation);
                 drainedTargetAllocation = null;
+                log.info("Final target allocation after grace period:");
+                printAllocationStatus();
             }
 
             var terminating = false;
@@ -136,10 +130,7 @@ public class SchedulingCycle {
                 if (executionPlan.getOptimizationResult() != null) {
                     currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
                 }
-            } else {
-                // log.info("No reallocation performed!");
             }
-
 
             printAllocationStatus();
 
@@ -165,6 +156,16 @@ public class SchedulingCycle {
         currentState.setCurrentAnalysisResult(analysisResult);
     }
 
+
+    private void logCycleTimestamp() {
+        var secondsPerMinute = new BigDecimal(60);
+        var plainSeconds = new BigDecimal(currentClock);
+        var minutes = plainSeconds.divide(secondsPerMinute, RoundingMode.FLOOR);
+        var seconds = plainSeconds.remainder(secondsPerMinute);
+        var elapsedTime = MessageFormat.format("{0,number,#00}:{1,number,#00}", minutes, seconds);
+
+        log.info("\n\n########### Cooper Scheduling Cycle @ {} ###########", elapsedTime);
+    }
 
     private void printServiceLoad() {
         System.out.println();

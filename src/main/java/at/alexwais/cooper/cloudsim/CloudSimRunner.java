@@ -157,9 +157,7 @@ public class CloudSimRunner implements CloudProvider {
         vm.setRam(vmType.getRam()).setBw(1000).setSize(1000);
 
         var dc = datacenters.get(datacenter);
-        broker.setDatacenterMapper((d, v) -> {
-            return dc;
-        });
+        broker.setDatacenterMapper((d, v) -> dc);
 
         broker.submitVm(vm);
         vmList.put(vm.getId(), vm);

@@ -17,4 +17,8 @@ public class VmType {
 
     private final DataCenter dataCenter;
 
+    public Integer getCpuUnits() {
+        return this.cpuCores * 1024;
+    }
+
 }

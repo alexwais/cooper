@@ -72,7 +72,7 @@ public class Executor {
 
         containersToStart.forEach(a -> {
             var providerVmId = providerState.getLeasedProviderVms().get(a.getVm());
-            var providerId = scheduler.launchContainer(1, a.getContainer().getMemory().toMegabytes(), providerVmId);
+            var providerId = scheduler.launchContainer(1, a.getContainer().getMemory(), providerVmId);
             providerState.allocateContainerInstance(a, providerId);
         });
 

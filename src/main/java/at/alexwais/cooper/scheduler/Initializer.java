@@ -1,6 +1,5 @@
 package at.alexwais.cooper.scheduler;
 
-import at.alexwais.cooper.ConsoleTable;
 import at.alexwais.cooper.config.DataCenterConfigMap;
 import at.alexwais.cooper.config.DataCenterDistanceConfigList;
 import at.alexwais.cooper.config.ServiceConfigMap;
@@ -89,56 +88,13 @@ public class Initializer {
         configMap.forEach((key, config) -> {
             var service = new Service(key);
 
-//            var totalInstanceCounter = 1000;
             for (var c : config.getContainerConfigurations()) {
-                var containerConfiguration = new ContainerType(service.getName() + ":" + c.getLabel(), c.getCpuShares(), c.getMemory(), c.getRpmCapacity(), service);
+                var containerConfiguration = new ContainerType(service.getName() + ":" + c.getLabel(), c.getCpuShares(), (int) c.getMemory().toMegabytes(), c.getRpmCapacity(), service);
                 service.getContainerTypes().add(containerConfiguration);
-
-//                var containers = new ArrayList<ContainerInstance>();
-//                for (int j = 0; j < INSTANCE_COUNT; j++) {
-//                    var containerId = service.getName() + ":c" + totalInstanceCounter++;
-//                    containers.add(new ContainerInstance(containerId, containerConfiguration, service));
-//                }
-//                service.getContainers().addAll(containers);
-//                service.getContainersByConfiguration().putIfAbsent(containerConfiguration.getLabel(), containers);
             }
 
             services.add(service);
         });
-    }
-
-    public void printState() {
-        for (DataCenter dc : dataCenters) {
-            System.out.println();
-            System.out.println(dc.getName() + ":");
-            System.out.println();
-            var table = buildTable(dc);
-            table.print();
-        }
-
-        for (Service s : services) {
-            System.out.println();
-            System.out.println(s.getName() + ":");
-            System.out.println();
-            var table = buildTable(s);
-            table.print();
-        }
-    }
-
-    private ConsoleTable buildTable(DataCenter dataCenter) {
-        var table = new ConsoleTable("Type", "Count");
-        dataCenter.getVmTypes().forEach(it -> {
-            table.addRow(it.getLabel(), dataCenter.getVmsByType().get(it.getLabel()).size());
-        });
-        return table;
-    }
-
-    private ConsoleTable buildTable(Service service) {
-        var table = new ConsoleTable("Type");
-        service.getContainerTypes().forEach(it -> {
-            table.addRow(it.getLabel());
-        });
-        return table;
     }
 
 }

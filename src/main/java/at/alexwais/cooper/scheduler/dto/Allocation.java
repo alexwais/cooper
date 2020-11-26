@@ -96,7 +96,7 @@ public class Allocation {
                 .collect(Collectors.toList());
     }
 
-    // TODO VMs running, even if unused -> i.e. private cloud!
+    // VMs running, even if unused -> i.e. private cloud!
     public List<VmInstance> getRunningVms() {
         return runningVMs;
     }

@@ -34,7 +34,7 @@ public class State {
     private ProviderState providerState = new ProviderState();
 
 
-    public Pair<Integer, Long> getFreeCapacity(VmInstance vm) {
+    public Pair<Integer, Integer> getFreeCapacity(VmInstance vm) {
         if (!currentTargetAllocation.getRunningVms().contains(vm)) {
             return null;
         }
@@ -45,10 +45,10 @@ public class State {
                 .map(a -> a.getContainer().getCpuShares())
                 .reduce(0, Integer::sum);
         var allocatedMemoryCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
-                .map(a -> a.getContainer().getMemory().toMegabytes())
-                .reduce(0L, Long::sum);
+                .map(a -> a.getContainer().getMemory())
+                .reduce(0, Integer::sum);
 
-        var freeCpuCapacity = vm.getType().getCpuCores() * 1024 - allocatedCpuCapacity;
+        var freeCpuCapacity = vm.getType().getCpuUnits() - allocatedCpuCapacity;
         var freeMemoryCapacity = vm.getType().getMemory() - allocatedMemoryCapacity;
 
         return Pair.of(freeCpuCapacity, freeMemoryCapacity);

@@ -3,7 +3,6 @@ package at.alexwais.cooper.domain;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import org.springframework.util.unit.DataSize;
 
 @Getter
 @AllArgsConstructor
@@ -12,9 +11,9 @@ public class ContainerType {
 
     private String label;
 
-    private Integer cpuShares;
+    private Integer cpuShares; // TODO rename to cpuUnits?
 
-    private DataSize memory; // MB
+    private Integer memory; // MB
 
     private Long rpmCapacity;
 

@@ -14,6 +14,11 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
+    private static final int W_COST = 100;
+    private static final int W_GRACE_PERIOD_WASTE = 50;
+    private static final float W_DISTANCE = 0.1f;
+    private static final int W_OVER_PROVISIONING = 1;
+
 
     /**
      * Ignores the previous allocation (w.r.t. grace period cost and overallocation constraints), constituting
@@ -31,7 +36,6 @@ public class FitnessFunction {
         var totalCost = resourceAllocation.getTotalCost();
 
         // Term 2 - Grace Period Cost
-        // TODO use running vs. used VMs?
         var gracePeriodCost = previousAllocation == null ? 0 :
                 previousAllocation.getUsedVms().stream()
                 .filter(vm -> !resourceAllocation.getUsedVms().contains(vm))
@@ -39,6 +43,7 @@ public class FitnessFunction {
                 .reduce(0f, Float::sum);
 
         // Term 3 - Exploiting Co-Location
+        // TODO calculation style - differs from ILP objective function...?
         var distanceBonus = 0f;
         for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
             for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
@@ -81,15 +86,11 @@ public class FitnessFunction {
             violations = validator.violations(resourceAllocation, previousAllocation, measures.getTotalServiceLoad());
         }
 
-        var w_cost = 100;
-        var w_gradePeriodWaste = 50;
-        var w_distance = 0.1f;
-        var w_overProvisioning = 1;
 
-        var term1_cost = totalCost * w_cost;
-        var term2_gracePeriodCost = gracePeriodCost * w_gradePeriodWaste;
-        var term3_distance = distanceBonus * w_distance;
-        var term4_overProvisioning = overProvisionedCapacity * w_overProvisioning;
+        var term1_cost = totalCost * W_COST;
+        var term2_gracePeriodCost = gracePeriodCost * W_GRACE_PERIOD_WASTE;
+        var term3_distance = distanceBonus * W_DISTANCE;
+        var term4_overProvisioning = overProvisionedCapacity * W_OVER_PROVISIONING;
 
         var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning
                 + violations * 10_000_000f;

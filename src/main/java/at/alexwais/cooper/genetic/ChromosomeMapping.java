@@ -13,7 +13,7 @@ import lombok.Getter;
 import org.apache.commons.math3.distribution.EnumeratedIntegerDistribution;
 
 @Getter
-public class Mapping {
+public class ChromosomeMapping {
 
     private final Model model;
     private final SystemMeasures systemMeasures;
@@ -23,7 +23,9 @@ public class Mapping {
     private final Map<VmInstance, Integer> vmsIndex = new HashMap<>();
     private final Map<Service, Integer> servicesIndex = new HashMap<>();
 
-    public Mapping(Model model, SystemMeasures systemMeasures) {
+    private static final double LOAD_SHARE_BUFFER = 1d;
+
+    public ChromosomeMapping(Model model, SystemMeasures systemMeasures) {
         this.model = model;
         this.systemMeasures = systemMeasures;
         this.vmCount = model.getVms().size();
@@ -69,7 +71,6 @@ public class Mapping {
     public Genotype<DistributedIntegerGene> serviceRowSquareEncoder(Map<VmInstance, List<ContainerType>> vmContainerMap) {
         var serviceVmMatrix = new int[servicesIndex.size()][vmsIndex.size()];
 
-        // TODO use containersByService map instead
         for (var entry : vmContainerMap.entrySet()) {
             var vm = entry.getKey();
             var containers = entry.getValue();
@@ -101,49 +102,14 @@ public class Mapping {
     }
 
 
-    private static final double loadMulti = 1d;
-
-    // TODO refactor duplicated code
     private DistributedIntegerChromosome chromosome(Service service, int length) {
-        var containersOfService = service.getContainerTypes();
-        var containerCount = containersOfService.size();
-        var serviceShare = shareOfServiceLoadToOverallCapacity(service) * loadMulti;
-        var containerShare = serviceShare / containerCount;
-
-        // 1-based container index to probability
-        var probabilityMap = containersOfService.stream()
-                .collect(Collectors.toMap(c -> containersOfService.indexOf(c) + 1, c -> containerShare));
-
-        var totalServiceProbability = probabilityMap.values().stream()
-                .reduce(0d, Double::sum);
-        var noAllocationProbability = 1 - totalServiceProbability;
-        probabilityMap.put(0, noAllocationProbability);
-
-        var indexArray = probabilityMap.keySet().stream().mapToInt(i -> i).toArray();
-        var probabilityArray = probabilityMap.values().stream().mapToDouble(d -> d).toArray();
-        var containerDistribution = new EnumeratedIntegerDistribution(indexArray, probabilityArray);
+        var containerDistribution = computeContainerDistribution(service);
 
         return DistributedIntegerChromosome.of(containerDistribution, length);
     }
 
     private DistributedIntegerChromosome chromosome(Service service, int[] geneValues) {
-        var containersOfService = service.getContainerTypes();
-        var containerCount = containersOfService.size();
-        var serviceShare = shareOfServiceLoadToOverallCapacity(service) * loadMulti;
-        var containerShare = serviceShare / containerCount;
-
-        // 1-based container index to probability
-        var probabilityMap = containersOfService.stream()
-                .collect(Collectors.toMap(c -> containersOfService.indexOf(c) + 1, c -> containerShare));
-
-        var totalServiceProbability = probabilityMap.values().stream()
-                .reduce(0d, Double::sum);
-        var noAllocationProbability = 1 - totalServiceProbability;
-        probabilityMap.put(0, noAllocationProbability);
-
-        var indexArray = probabilityMap.keySet().stream().mapToInt(i -> i).toArray();
-        var probabilityArray = probabilityMap.values().stream().mapToDouble(d -> d).toArray();
-        var containerDistribution = new EnumeratedIntegerDistribution(indexArray, probabilityArray);
+        var containerDistribution = computeContainerDistribution(service);
 
         var genes = Arrays.stream(geneValues)
                 .mapToObj(v -> DistributedIntegerGene.of(v, containerDistribution))
@@ -151,10 +117,34 @@ public class Mapping {
         return DistributedIntegerChromosome.of(genes, containerDistribution);
     }
 
+    private EnumeratedIntegerDistribution computeContainerDistribution(Service service) {
+        var containersOfService = service.getContainerTypes();
+        var containerCount = containersOfService.size();
+        var serviceShare = shareOfServiceLoadToOverallCapacity(service) * LOAD_SHARE_BUFFER;
+        var containerShare = serviceShare / containerCount;
+
+        // 1-based container index to probability
+        var probabilityMap = containersOfService.stream()
+                .collect(Collectors.toMap(c -> containersOfService.indexOf(c) + 1, c -> containerShare));
+
+        var totalServiceProbability = probabilityMap.values().stream()
+                .reduce(0d, Double::sum);
+        var noAllocationProbability = 1 - totalServiceProbability;
+        probabilityMap.put(0, noAllocationProbability);
+
+        var indexArray = probabilityMap.keySet().stream().mapToInt(i -> i).toArray();
+        var probabilityArray = probabilityMap.values().stream().mapToDouble(d -> d).toArray();
+        var containerDistribution = new EnumeratedIntegerDistribution(indexArray, probabilityArray);
+        return containerDistribution;
+    }
+
     private double shareOfServiceLoadToOverallCapacity(Service service) {
         var overallServiceLoad = systemMeasures.getTotalServiceLoad().get(service.getName());
+        var containerTypeCount = service.getContainerTypes().size();
         var overallCapacityForService = service.getContainerTypes().stream()
-                .map(t -> t.getRpmCapacity() * vmCount) // a container type can be allocated once on a VM
+                // one container type per service can be allocated once on a VM
+                // TODO test with/without containerTypeCount
+                .map(t -> t.getRpmCapacity() * vmCount / containerTypeCount)
                 .reduce(0L, Long::sum);
         var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?
 

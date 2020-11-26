@@ -10,6 +10,7 @@ import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
+import io.jenetics.engine.RetryConstraint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
@@ -49,17 +50,18 @@ public class GeneticAlgorithm implements Optimizer {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
-        var mapping = new Mapping(model, systemMeasures);
+        var mapping = new ChromosomeMapping(model, systemMeasures);
         var serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
 
+        var retryConstraint = new RetryConstraint<DistributedIntegerGene, Float>(
+                p -> validator.calcOverallocatedVmViolations(new Allocation(model, serviceRowCodec.decode(p.genotype())), previousAllocation) == 0,
+                mapping.serviceRowGenotypeFactory(),
+                3
+        );
+        var repairConstraint = new RepairingConstraint(model, systemMeasures, validator, mapping, previousAllocation);
 
-//        var constraint = new RetryConstraint<DistributedIntegerGene, Float>(
-//                p -> validator.calcOverallocatedVmViolations(new Allocation(model, serviceRowCodec.decode(p.genotype())), previousAllocation) == 0,
-//                mapping.serviceRowGenotypeFactory(),
-//                3
-//        );
-
-        var constraint = new RepairingConstraint(model, systemMeasures, validator, mapping, previousAllocation);
+        // TODO test retry vs. repair
+        var constraint = repairConstraint;
 
         Engine<DistributedIntegerGene, Float> engine1 = Engine
                 .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures), serviceRowCodec)

@@ -127,13 +127,20 @@ public class Variables {
         log.info("coloc variables: {}", concurrentAllocationVariables.size());
 
         for (var service : model.getServices().values()) {
+            var maxCpuRequirementOfServiceContainers = service.getContainerTypes().stream()
+                    .mapToInt(ContainerType::getCpuShares)
+                    .max().getAsInt();
+            var maxMemRequirementOfServiceContainers = service.getContainerTypes().stream()
+                    .mapToInt(ContainerType::getMemory)
+                    .max().getAsInt();
+
             for (var vm : model.getVms().values()) {
                 var cpuIdentifier = cpuResourceVariableIdentifier(service, vm);
-                var cpuRequirementVariable = cplex.intVar(0, 100_000, cpuIdentifier); // TODO use possible maximum from vm types
+                var cpuRequirementVariable = cplex.intVar(0, maxCpuRequirementOfServiceContainers, cpuIdentifier);
                 cpuRequirementVariables.put(cpuIdentifier, cpuRequirementVariable);
 
                 var memIdentifier = memResourceVariableIdentifier(service, vm);
-                var memRequirementVariable = cplex.intVar(0, 100_000, memIdentifier);
+                var memRequirementVariable = cplex.intVar(0, maxMemRequirementOfServiceContainers, memIdentifier);
                 memRequirementVariables.put(memIdentifier, memRequirementVariable);
             }
         }

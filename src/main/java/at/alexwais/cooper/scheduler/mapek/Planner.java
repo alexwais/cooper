@@ -40,6 +40,7 @@ public class Planner {
 
 
     private static final float DRIFT_TOLERANCE = 2.0f; // percentage
+    private static final float FITNESS_DRIFT_TOLERANCE = 5.0f; // percentage
 
 
     @Getter
@@ -113,12 +114,13 @@ public class Planner {
                     if (isExceeding) log.debug("Capacity of {} changed significantly: {}%", e.getKey(), e.getValue());
                     return isExceeding;
                 });
+        var isFitnessDriftExceeded = state.getCurrentAnalysisResult().getFitnessDrift() > FITNESS_DRIFT_TOLERANCE;
 
-        if (state.getCurrentAnalysisResult().isCurrentAllocationUnderprovisioned()) {
-            log.warn("Current allocation is under-provisioned!");
-        }
         if (!state.getCurrentAnalysisResult().isCurrentAllocationValid()) {
             log.warn("Current allocation is invalid!");
+        }
+        if (state.getCurrentAnalysisResult().isCurrentAllocationUnderprovisioned()) {
+            log.warn("Current allocation is under-provisioned!");
         }
         if (isLoadDriftExceeded) {
             log.warn("Load drift detected!");
@@ -126,13 +128,15 @@ public class Planner {
         if (isCapacityDriftExceeded) {
             log.warn("Capacity drift detected!");
         }
-
-        // TODO compare neutral fitness
+        if (isFitnessDriftExceeded) {
+            log.warn("Fitness drift detected!");
+        }
 
         if (state.getCurrentAnalysisResult().isCurrentAllocationValid()
                 && !state.getCurrentAnalysisResult().isCurrentAllocationUnderprovisioned()
                 && !isLoadDriftExceeded
-                && !isCapacityDriftExceeded) {
+                && !isCapacityDriftExceeded
+                && !isFitnessDriftExceeded) {
            return false;
         }
         return true;
