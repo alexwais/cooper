@@ -15,8 +15,7 @@ public class CsvLoader {
 
     private Model model;
 
-    private static final String COMMA_DELIMITER = ",";
-
+    private static final String COMMA_DELIMITER = ",|;";
 
     public CsvLoader(Model model) {
         this.model = model;
@@ -54,7 +53,7 @@ public class CsvLoader {
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = br.readLine()) != null) {
-                    var values = line.split(",|;");
+                    var values = line.split(COMMA_DELIMITER);
                     records.add(Arrays.asList(values));
                 }
             }

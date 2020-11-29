@@ -14,10 +14,10 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
-    private static final int W_COST = 100;
-    private static final int W_GRACE_PERIOD_WASTE = 50;
+    private static final int W_COST = 1000;
+    private static final int W_GRACE_PERIOD_WASTE = 500;
     private static final float W_DISTANCE = 0.1f;
-    private static final int W_OVER_PROVISIONING = 1;
+    private static final float W_OVER_PROVISIONING = 0.1f;
 
 
     /**

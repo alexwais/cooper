@@ -24,9 +24,6 @@ public class IlpOptimizer implements Optimizer {
 
 
     public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
-        var stopWatch = new StopWatch();
-        stopWatch.start();
-
         var problem = new IlpProblem(model, previousAllocation, systemMeasures, config);
 
         var params = new IloCplex.ParameterSet();
@@ -34,11 +31,15 @@ public class IlpOptimizer implements Optimizer {
 //        params.setParam(IloCplex.DoubleParam.TimeLimit, 20);
 //        params.setParam(IloCplex.IntParam.RootAlgorithm, IloCplex.Algorithm.Primal);
 
+
+        var stopWatch = new StopWatch();
+        stopWatch.start();
+
         var allocationTuples = problem.solve(params);
 
         stopWatch.stop();
 
-        return new OptimizationResult(model, systemMeasures, allocationTuples);
+        return new OptimizationResult(model, systemMeasures, allocationTuples, stopWatch.getTotalTimeMillis());
     }
 
 }

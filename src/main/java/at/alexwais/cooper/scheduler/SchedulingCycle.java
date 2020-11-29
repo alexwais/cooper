@@ -1,12 +1,15 @@
 package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.ConsoleTable;
+import at.alexwais.cooper.benchmark.BenchmarkRecord;
+import at.alexwais.cooper.benchmark.BenchmarkService;
 import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
 import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.scheduler.dto.Allocation;
+import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
@@ -14,6 +17,7 @@ import at.alexwais.cooper.scheduler.mapek.Executor;
 import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
 import at.alexwais.cooper.scheduler.simulated.EndOfScenarioException;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.MessageFormat;
@@ -40,6 +44,9 @@ public class SchedulingCycle {
     private final Model model;
     private final State currentState;
 
+    @Autowired
+    private BenchmarkService benchmarkService;
+
     private long currentClock = 0L; // seconds
     private Allocation drainedTargetAllocation;
 
@@ -61,6 +68,90 @@ public class SchedulingCycle {
         var listener = new SchedulingListener();
         cloudProvider.registerListener(listener);
         cloudProvider.run();
+    }
+
+
+    class SchedulingListener implements Listener {
+        @Override
+        public void cycleElapsed(long clock, Scheduler scheduler) {
+            currentClock = clock;
+
+            logCycleTimestamp();
+
+            // The final (drained) target allocation will be enforced after the current cycle completed.
+            // A new Optimization may take place immediately after grace period (with containers/VMs still running).
+            if (drainedTargetAllocation != null) {
+                log.info("Applying final target allocation after draining period...");
+                executor.execute(scheduler, drainedTargetAllocation, currentState);
+                currentState.setCurrentTargetAllocation(drainedTargetAllocation);
+                drainedTargetAllocation = null;
+                log.info("Final target allocation after grace period:");
+                printAllocationStatus();
+            }
+
+            try {
+                monitor();
+            } catch (EndOfScenarioException e) {
+                scheduler.abort();
+                tearDown();
+                try {
+                    benchmarkService.print();
+                } catch (IOException e2) {
+                    e2.printStackTrace();
+                }
+            }
+
+            analyze();
+
+            printServiceLoad();
+
+            var executionPlan = planner.plan(currentState);
+
+            if (executionPlan.isReallocation()) {
+                executor.execute(scheduler, executionPlan.getTargetAllocation(), currentState);
+                currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
+
+                if (executionPlan.getDrainedTargetAllocation() != null) {
+                    drainedTargetAllocation = executionPlan.getDrainedTargetAllocation();
+                }
+                if (executionPlan.getOptimizationResult() != null) {
+                    currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
+                }
+            }
+
+            printAllocationStatus();
+            benchmark(executionPlan);
+        }
+
+        @Override
+        public int getClockInterval() {
+            return 30;
+        }
+    }
+
+    private void monitor() throws EndOfScenarioException {
+        var measuredLoad = monitor.getCurrentLoad((int) currentClock);
+        currentState.setCurrentSystemMeasures(new SystemMeasures(model, measuredLoad, currentState.getCurrentTargetAllocation()));
+    }
+
+    private void analyze() {
+        var analysisResult = analyzer.analyze(currentState);
+        currentState.setCurrentAnalysisResult(analysisResult);
+    }
+
+    private void benchmark(ExecutionPlan executionPlan) {
+        var isEvenMinute = currentClock % 120 == 0;
+        if (isEvenMinute) {
+            var minute = currentClock / 60;
+            var record = new BenchmarkRecord(
+                    (int) minute,
+                    currentState.getCurrentSystemMeasures(),
+                    currentState.getCurrentAnalysisResult(),
+                    executionPlan.getOptimizationResult(),
+                    currentState.getCurrentTargetAllocation()
+            );
+            benchmarkService.addRecord(record);
+        }
     }
 
     private void tearDown() {
@@ -88,74 +179,6 @@ public class SchedulingCycle {
 //        log.info(" *** Total Greedy Fitness: {}", totalGreedyFitness);
 //        log.info(" *** Avg. Runtime: {}s", averageRuntime / 1000d);
     }
-
-
-    class SchedulingListener implements Listener {
-        @Override
-        public void cycleElapsed(long clock, Scheduler scheduler) {
-            currentClock = clock;
-
-            logCycleTimestamp();
-
-            // The final (drained) target allocation will be enforced after the current cycle completed.
-            // A new Optimization may take place immediately after grace period (with containers/VMs still running).
-            if (drainedTargetAllocation != null) {
-                log.info("Applying final target allocation after draining period...");
-                executor.execute(scheduler, drainedTargetAllocation, currentState);
-                currentState.setCurrentTargetAllocation(drainedTargetAllocation);
-                drainedTargetAllocation = null;
-                log.info("Final target allocation after grace period:");
-                printAllocationStatus();
-            }
-
-            var terminating = false;
-            try {
-                monitor();
-            } catch (EndOfScenarioException e) {
-                terminating = true;
-            }
-            analyze();
-
-            printServiceLoad();
-
-            var executionPlan = planner.plan(currentState);
-
-            if (executionPlan.isReallocation()) {
-                executor.execute(scheduler, executionPlan.getTargetAllocation(), currentState);
-                currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
-
-                if (executionPlan.getDrainedTargetAllocation() != null) {
-                    drainedTargetAllocation = executionPlan.getDrainedTargetAllocation();
-                }
-                if (executionPlan.getOptimizationResult() != null) {
-                    currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
-                }
-            }
-
-            printAllocationStatus();
-
-            if (terminating) {
-                scheduler.abort();
-                tearDown();
-            }
-        }
-
-        @Override
-        public int getClockInterval() {
-            return 30;
-        }
-    }
-
-    private void monitor() throws EndOfScenarioException {
-        var measuredLoad = monitor.getCurrentLoad((int) currentClock);
-        currentState.setCurrentSystemMeasures(new SystemMeasures(model, measuredLoad, currentState.getCurrentTargetAllocation()));
-    }
-
-    private void analyze() {
-        var analysisResult = analyzer.analyze(currentState);
-        currentState.setCurrentAnalysisResult(analysisResult);
-    }
-
 
     private void logCycleTimestamp() {
         var secondsPerMinute = new BigDecimal(60);

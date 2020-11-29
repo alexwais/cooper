@@ -8,6 +8,7 @@ cooper:
   scenario: ${spring.profiles.active}
   multiplicator: 1
   loadFixture: ${cooper.scenario}@${cooper.multiplicator}x.csv
+  benchmarkOutput: ${cooper.scenario}@${cooper.multiplicator}x.csv
   optimization:
     algorithm: CPLEX
     enableColocation: true
