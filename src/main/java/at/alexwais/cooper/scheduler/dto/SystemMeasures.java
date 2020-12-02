@@ -38,11 +38,18 @@ public class SystemMeasures {
     }
 
 
+    public int getInteractionBetween(Service from, Service to) {
+        var edge = interactionGraph.getEdge(from.getName(), to.getName());
+
+        var interaction = (int) interactionGraph.getEdgeWeight(edge);
+        return interaction;
+    }
+
     public double getAffinityBetween(Service serviceA,
                                      Service serviceB) {
         var isSameService = serviceA.equals(serviceB);
         if (isSameService) {
-            // No affinity between same service possible, graph contains no loops
+            // No affinity between the same service possible, graph contains no loops
             return 0;
         }
         var edge = affinityGraph.getEdge(serviceA.getName(), serviceB.getName());

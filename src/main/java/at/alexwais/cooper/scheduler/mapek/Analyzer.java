@@ -124,8 +124,6 @@ public class Analyzer {
     }
 
     private SimpleWeightedGraph<String, DefaultWeightedEdge> buildAffinityGraph(State state) {
-        var interactionGraph = state.getCurrentSystemMeasures().getInteractionGraph();
-
         var affinityGraph = new SimpleWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
 
         model.getServices().values().forEach(s -> affinityGraph.addVertex(s.getName()));
@@ -134,11 +132,8 @@ public class Analyzer {
                 if (!s1.equals(s2)) {
                     affinityGraph.addEdge(s1.getName(), s2.getName(), new DefaultWeightedEdge());
 
-                    var interactionEdge1 = interactionGraph.getEdge(s1.getName(), s2.getName());
-                    var interactionEdge2 = interactionGraph.getEdge(s2.getName(), s1.getName());
-
-                    var interaction1 = (int) interactionGraph.getEdgeWeight(interactionEdge1);
-                    var interaction2 = (int) interactionGraph.getEdgeWeight(interactionEdge2);
+                    var interaction1 = state.getCurrentSystemMeasures().getInteractionBetween(s1, s2);
+                    var interaction2 = state.getCurrentSystemMeasures().getInteractionBetween(s2, s1);
 
                     var bidirectionalInteraction = interaction1 + interaction2;
                     var affinity = (double) bidirectionalInteraction / (double) state.getCurrentSystemMeasures().getTotalSystemLoad();

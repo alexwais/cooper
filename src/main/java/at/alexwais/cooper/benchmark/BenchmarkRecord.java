@@ -5,6 +5,7 @@ import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,12 +39,18 @@ public class BenchmarkRecord {
     }
 
 
+    @Getter
+    @JsonIgnore
     private SystemMeasures measures;
 
     private AnalysisResult analysisResult;
 
+    @Getter
+    @JsonIgnore
     private OptimizationResult optimizationResult;
 
+    @Getter
+    @JsonIgnore
     private Allocation currentAllocation;
 
 }
