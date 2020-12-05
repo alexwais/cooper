@@ -13,8 +13,8 @@ public class ContainerInteractionNode extends InteractionNode {
     private double freeCapacity;
     private double initialLoad;
 
-    public ContainerInteractionNode(Model model, ContainerType container, double initialLoad) {
-        super(model);
+    public ContainerInteractionNode(String label, Model model, ContainerType container, double initialLoad) {
+        super(label, 0, model);
         this.initialLoad = initialLoad;
         this.service = container.getService();
         this.freeCapacity = container.getRpmCapacity().doubleValue();
@@ -22,16 +22,22 @@ public class ContainerInteractionNode extends InteractionNode {
 
 
     public Result initialize() {
-        return this.processOverflow(Map.of(service, initialLoad));
+        var result = this.process(Map.of(service, initialLoad));
+        assert result.getProcessedLoad().get(service) == initialLoad;
+        return result;
     }
 
-    public Result processOverflow(Map<Service, Double> loadToProcess) {
+    public Result process(Map<Service, Double> loadToProcess) {
         var requestedLoad = loadToProcess.get(service);
         var isLoadPresent = requestedLoad != null && requestedLoad > 0;
 
         if (freeCapacity > 0 && isLoadPresent) {
-            var processedLoad = Math.min(freeCapacity, requestedLoad);
+            var processableLoad = Math.min(freeCapacity, requestedLoad);
+            var processedLoad = new HashMap<Service, Double>();
             var inducedLoad = new HashMap<Service, Double>();
+
+            processedLoad.put(service, processableLoad);
+            freeCapacity -= processableLoad;
 
             var downstreamServices = model.getServices().values().stream()
                     .filter(s -> !s.equals(service))
@@ -40,29 +46,17 @@ public class ContainerInteractionNode extends InteractionNode {
             for (var toService : downstreamServices) {
                 var multiplier = model.getInteractionMultiplication().get(service.getName())
                         .get(toService.getName());
-                var inducedCalls = processedLoad * multiplier;
+                var inducedCalls = processableLoad * multiplier;
                 if (inducedCalls > 0) {
                     inducedLoad.put(toService, inducedCalls);
                 }
             }
 
-            freeCapacity -= processedLoad;
-
-            var remainingLoad = new HashMap<Service, Double>();
-            remainingLoad.put(service, requestedLoad - processedLoad);
-
-            inducedLoad.entrySet().forEach(e -> {
-                var service = e.getKey();
-                var prevCalls = loadToProcess.getOrDefault(service, 0d);
-                remainingLoad.put(e.getKey(), e.getValue() + prevCalls);
-            });
-
-            loadToProcess.entrySet()
-                    .forEach(e -> remainingLoad.putIfAbsent(e.getKey(), e.getValue()));
-
-            return new Result(remainingLoad, true);
+            this.totalProcessedLoad.add(processedLoad);
+            this.totalOverflow.add(inducedLoad);
+            return new Result(inducedLoad, processedLoad, Map.of(), true);
         } else {
-            return new Result(loadToProcess, false);
+            return new Result(Map.of(), Map.of(), Map.of(), false);
         }
     }
 

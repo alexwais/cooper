@@ -1,5 +1,6 @@
 package at.alexwais.cooper.benchmark;
 
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
@@ -37,35 +38,44 @@ public class InteractionSimulation {
 
         var dataCenterNodes = new ArrayList<AggregatingInteractionNode>();
         for (var dataCenter : model.getDataCenters().values()) {
-
             var vmNodes = new ArrayList<AggregatingInteractionNode>();
             for (var vm : dataCenter.getVmInstances()) {
                 var containers = allocation.getAllocatedContainersOnVm(vm);
                 if (containers == null || containers.isEmpty()) continue;
 
-                var vmNode = vmNode(containers, assignedContainerLoad);
+                var vmNode = vmNode(vm, containers, assignedContainerLoad);
                 vmNodes.add(vmNode);
             }
 
-            var dataCenterNode = new AggregatingInteractionNode(model, vmNodes);
+            var dataCenterNode = new AggregatingInteractionNode(dataCenter.getName(), 50, model, vmNodes);
             dataCenterNodes.add(dataCenterNode);
         }
 
-        var rootNode = new AggregatingInteractionNode(model, dataCenterNodes);
+        var rootNode = new AggregatingInteractionNode("root", 100, model, dataCenterNodes);
         var result = rootNode.initialize();
 
-        var remainder = result.getOverflowPerService().entrySet().stream()
+        var processedLoad = result.getProcessedLoad().entrySet().stream()
+                .collect(Collectors.toMap(e -> e.getKey().getName(), Map.Entry::getValue));
+        var remainingOverflow = result.getInducedOverflow().entrySet().stream()
                 .collect(Collectors.toMap(e -> e.getKey().getName(), Map.Entry::getValue));
 
-        var remainderSum = remainder.values().stream().mapToDouble(v -> v).sum();
-        log.info("Remainder: {}", remainder);
+        var processedSum = processedLoad.values().stream().mapToDouble(v -> v).sum();
+        var totalProcessedSum = rootNode.totalProcessedLoad.values().stream().mapToDouble(v -> v).sum();
+        var remainderSum = remainingOverflow.values().stream().mapToDouble(v -> v).sum();
+        log.info("Processed external load: {} | Processed total load: {} | Remaining overflow: {}", processedSum, totalProcessedSum, remainingOverflow);
+
         if (remainderSum > 0.1) {
             throw new IllegalStateException("Remainder!");
+        }
+        var diff = measures.getTotalSystemLoad() - totalProcessedSum;
+        if (Math.abs(diff) >= 1) {
+            throw new IllegalStateException("Total load discrepancy!");
         }
     }
 
 
-    private AggregatingInteractionNode vmNode(List<Allocation.AllocationTuple> containers,
+    private AggregatingInteractionNode vmNode(VmInstance vm,
+                                              List<Allocation.AllocationTuple> containers,
                                               Map<Allocation.AllocationTuple, Double> assignedContainerLoad) {
         var containerNodes = new ArrayList<ContainerInteractionNode>();
 
@@ -73,11 +83,11 @@ public class InteractionSimulation {
             var container = tuple.getContainer();
             var assignedLoad = assignedContainerLoad.get(tuple);
 
-            var node = new ContainerInteractionNode(model, container, assignedLoad);
+            var node = new ContainerInteractionNode(container.getLabel(), model, container, assignedLoad);
             containerNodes.add(node);
         }
 
-        return new AggregatingInteractionNode(model, containerNodes);
+        return new AggregatingInteractionNode(vm.getId(), 0, model, containerNodes);
     }
 
 }

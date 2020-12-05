@@ -2,7 +2,6 @@ package at.alexwais.cooper.benchmark;
 
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.scheduler.Model;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,68 +9,88 @@ public class AggregatingInteractionNode extends InteractionNode {
 
     private List<? extends InteractionNode> childNodes;
 
-    public AggregatingInteractionNode(Model model, List<? extends InteractionNode> children) {
-        super(model);
+    public AggregatingInteractionNode(String label, int latency, Model model, List<? extends InteractionNode> children) {
+        super(label, latency, model);
         this.childNodes = children;
     }
 
 
     public Result initialize() {
-        var overflowPerService = new HashMap<Service, Double>();
+        var overflowPool = new ServiceLoadMap();
+        var processedLoad = new ServiceLoadMap();
+        var internalProcessedLoad = new ServiceLoadMap();
 
+        // process initial load on child nodes
         for (var childNode : childNodes) {
             var result = childNode.initialize();
+            overflowPool.add(result.getInducedOverflow());
+            processedLoad.add(result.getProcessedLoad());
+            internalProcessedLoad.add(result.getInternalProcessedLoad());
+        }
+        this.totalProcessedLoad.add(internalProcessedLoad);
+        this.totalProcessedLoad.add(processedLoad);
 
-            for (var serviceAndOverflow : result.getOverflowPerService().entrySet()) {
-                var service = serviceAndOverflow.getKey();
-                var overflow = serviceAndOverflow.getValue();
+        // process induced overflow and count processed load as internal interaction
+        var result = this.process(overflowPool);
+        var processedOverflow = result.getProcessedLoad();
+        var internalProcessedOverflow = result.getInternalProcessedLoad();
+        var additionalOverflow = result.getInducedOverflow();
 
-                if (overflow > 0) {
-                    var prevCalls = overflowPerService.getOrDefault(service, 0d);
-                    overflowPerService.put(service, overflow + prevCalls);
+        overflowPool.deduct(processedOverflow); // TODO record latency
+        this.totalOverflow.add(overflowPool); // record remaining overflow before adding additional overflow
+        overflowPool.add(additionalOverflow);
+        internalProcessedLoad.add(result.getProcessedLoad());
+        internalProcessedLoad.add(internalProcessedOverflow);
+
+        return new Result(overflowPool, processedLoad, internalProcessedLoad, result.isHasProcessed());
+    }
+
+    public Result process(final Map<Service, Double> loadPerService) {
+        var remainingLoad = new ServiceLoadMap(loadPerService);
+        var processedLoad = new ServiceLoadMap();
+        var overflowPool = new ServiceLoadMap();
+        var internalProcessedLoad = new ServiceLoadMap();
+
+        var hasProcessedAtLeastOnce = false;
+        var isProcessing = true;
+
+        while (isProcessing) { // if nothing could be processed anymore: no change, stop processing
+            isProcessing = false;
+            for (var childNode : childNodes) {
+                var overflowResult = childNode.process(overflowPool);
+                var processedOverflow = overflowResult.getProcessedLoad();
+                var internalProcessedOverflow = overflowResult.getInternalProcessedLoad();
+                var inducedOverflowByOverflow = overflowResult.getInducedOverflow();
+                internalProcessedLoad.add(processedOverflow);
+                internalProcessedLoad.add(internalProcessedOverflow);
+                overflowPool.deduct(processedOverflow); // TODO record latency
+                overflowPool.add(inducedOverflowByOverflow);
+
+                var loadResult = childNode.process(remainingLoad); // TODO distribute among nodes by capacity instead of first-fit?
+                var processed = loadResult.getProcessedLoad();
+                var internalProcessed = loadResult.getInternalProcessedLoad();
+                var inducedOverflow = loadResult.getInducedOverflow();
+
+                remainingLoad.deduct(processed);
+                processedLoad.add(processed);
+                internalProcessedLoad.add(internalProcessed);
+                overflowPool.add(inducedOverflow);
+
+                if (loadResult.isHasProcessed()) {
+                    isProcessing = true;
                 }
+            }
+
+            if (isProcessing) {
+                hasProcessedAtLeastOnce = true;
             }
         }
 
-        return this.processOverflow(overflowPerService);
-    }
 
-    public InteractionNode.Result processOverflow(Map<Service, Double> loadPerService) {
-        var processingHappened = false;
-
-        var loadToProcess = loadPerService;
-
-        var hasOverflowProcessed = false;
-        do {
-//            var returnedOverflow = new HashMap<Service, Double>();
-            hasOverflowProcessed = false;
-
-            for (var childNode : childNodes) {
-                var result = childNode.processOverflow(loadToProcess);
-                loadToProcess = result.getOverflowPerService();
-                if (result.isHasProcessed()) {
-                    hasOverflowProcessed = true;
-                }
-
-//                for (var serviceAndOverflow : result.getOverflowPerService().entrySet()) {
-//                    var service = serviceAndOverflow.getKey();
-//                    var overflow = serviceAndOverflow.getValue();
-//
-//                    if (overflow > 0) {
-//                        var prevCalls = returnedOverflow.getOrDefault(service, 0d);
-//                        returnedOverflow.put(service, overflow + prevCalls);
-//                    }
-//                }
-            }
-
-            if (hasOverflowProcessed) {
-                processingHappened = true;
-            }
-
-//            loadToProcess = returnedOverflow;
-        } while (hasOverflowProcessed); // if nothing could be processed anymore: no change, stop processing
-
-        return new Result(loadToProcess, processingHappened);
+        this.totalProcessedLoad.add(processedLoad);
+        this.totalProcessedLoad.add(internalProcessedLoad);
+        this.totalOverflow.add(overflowPool);
+        return new Result(overflowPool, processedLoad, internalProcessedLoad, hasProcessedAtLeastOnce);
     }
 
 }
