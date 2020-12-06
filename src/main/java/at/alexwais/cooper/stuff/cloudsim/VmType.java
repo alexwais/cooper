@@ -1,4 +1,4 @@
-package at.alexwais.cooper.cloudsim;
+package at.alexwais.cooper.stuff.cloudsim;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

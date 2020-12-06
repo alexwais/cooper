@@ -1,4 +1,4 @@
-package at.alexwais.cooper.cloudsim;
+package at.alexwais.cooper.stuff.cloudsim;
 
 import java.util.List;
 import java.util.Map;

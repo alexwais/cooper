@@ -32,6 +32,14 @@ public class FitnessFunction {
     }
 
     public float eval(Allocation resourceAllocation, Allocation previousAllocation, SystemMeasures measures) {
+//        var simulation = new InteractionSimulation(model, resourceAllocation, measures);
+//        try {
+//            simulation.simulate();
+//        } catch (Exception e) {
+//
+//        }
+
+
         // Term 1 - Minimize Cost
         var totalCost = resourceAllocation.getTotalCost();
 

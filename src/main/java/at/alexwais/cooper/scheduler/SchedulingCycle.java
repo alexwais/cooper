@@ -3,7 +3,6 @@ package at.alexwais.cooper.scheduler;
 import at.alexwais.cooper.ConsoleTable;
 import at.alexwais.cooper.benchmark.BenchmarkRecord;
 import at.alexwais.cooper.benchmark.BenchmarkService;
-import at.alexwais.cooper.cloudsim.CloudSimRunner;
 import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.csp.CloudProvider;
 import at.alexwais.cooper.csp.Listener;
@@ -17,6 +16,7 @@ import at.alexwais.cooper.scheduler.mapek.Executor;
 import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
 import at.alexwais.cooper.scheduler.simulated.EndOfScenarioException;
+import at.alexwais.cooper.scheduler.simulated.SimulatedCloudProvider;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SchedulingCycle {
 
-    private final CloudProvider cloudProvider = new CloudSimRunner();
+    private final CloudProvider cloudProvider = new SimulatedCloudProvider();
     private final Validator validator;
 
     // MAPE-K (Monitor - Analyze - Plan - Execute)
