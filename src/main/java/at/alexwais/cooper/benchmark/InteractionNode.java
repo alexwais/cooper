@@ -12,8 +12,6 @@ public abstract class InteractionNode {
 
     @Getter
     private final String label;
-    @Getter
-    private final int internalLatency;
 
     protected final Model model;
 

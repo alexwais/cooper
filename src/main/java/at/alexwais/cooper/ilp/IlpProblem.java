@@ -128,6 +128,7 @@ public class IlpProblem {
             objectiveTerm4.add(serviceTerm);
         }
 
+        // TODO finalize/document
         var objectiveFunction = cplex.sum(
                 cplex.prod(objectiveTerm1, 1),
                 cplex.prod(objectiveTerm2, 0.2),

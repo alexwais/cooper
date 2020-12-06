@@ -54,12 +54,12 @@ public class FitnessFunction {
 
                 var distance = model.getDistanceBetween(vmA, vmB);
                 var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
-                if (distance > 0) {
+//                if (distance > 0) {
                     distanceBonus -= (affinity / distance);
-                } else {
-                    // prevent division by zero
-                    distanceBonus -= affinity;
-                }
+//                } else {
+//                    // prevent division by zero
+//                    distanceBonus -= affinity;
+//                }
             }
         }
 

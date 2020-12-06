@@ -46,13 +46,13 @@ dataCenters:
 distance:
   - a: DC-private
     b: DC-private
-    latency: 50
+    latency: 20
   - a: DC-1
     b: DC-1
     latency: 30
   - a: DC-2
     b: DC-2
-    latency: 50
+    latency: 30
   - a: DC-1
     b: DC-2
     latency: 100

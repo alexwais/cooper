@@ -148,6 +148,7 @@ public class SchedulingCycle {
                     currentState.getCurrentSystemMeasures(),
                     currentState.getCurrentAnalysisResult(),
                     executionPlan.getOptimizationResult(),
+                    currentState.getLastOptimizationResult(),
                     currentState.getCurrentTargetAllocation()
             );
             benchmarkService.addRecord(record);

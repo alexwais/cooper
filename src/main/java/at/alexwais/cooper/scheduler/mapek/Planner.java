@@ -162,15 +162,16 @@ public class Planner {
                 break;
         }
 
+        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, systemMeasures.getTotalServiceLoad())) {
+            throw new IllegalStateException("Invalid allocation!");
+        }
+
         var neutralFitness = fitnessFunction.evalNeutral(optimizationResult.getAllocation(), systemMeasures);
         optimizationResult.setNeutralFitness(neutralFitness);
 
 //        greedyOptimizations.add(greedyResult);
         optimizations.add(optimizationResult);
 
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, systemMeasures.getTotalServiceLoad())) {
-            throw new IllegalStateException("Invalid allocation!");
-        }
         return optimizationResult;
     }
 

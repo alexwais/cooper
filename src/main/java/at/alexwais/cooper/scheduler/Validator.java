@@ -38,7 +38,7 @@ public class Validator {
 
     public int calcOverallocatedVmViolations(Allocation resourceAllocation, Allocation previousAllocation) {
         var violations = 0;
-        for (Map.Entry<VmInstance, List<ContainerType>> e : resourceAllocation.getAllocationMap().entrySet()) {
+        for (var e : resourceAllocation.getAllocationMap().entrySet()) {
             var vm = e.getKey();
             var containers = e.getValue();
 

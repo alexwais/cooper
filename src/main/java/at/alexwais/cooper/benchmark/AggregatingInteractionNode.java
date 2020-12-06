@@ -2,28 +2,40 @@ package at.alexwais.cooper.benchmark;
 
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.scheduler.Model;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AggregatingInteractionNode extends InteractionNode {
 
     private List<? extends InteractionNode> childNodes;
+    private Map<InteractionNode, Map<InteractionNode, Integer>> distanceGraph;
+    private InteractionRecorder interactionRecorder;
 
-    public AggregatingInteractionNode(String label, int latency, Model model, List<? extends InteractionNode> children) {
-        super(label, latency, model);
+    public AggregatingInteractionNode(String label,
+                                      Model model,
+                                      List<? extends InteractionNode> children,
+                                      Map<InteractionNode, Map<InteractionNode, Integer>> distanceGraph,
+                                      InteractionRecorder interactionRecorder) {
+        super(label, model);
         this.childNodes = children;
+        this.distanceGraph = distanceGraph;
+        this.interactionRecorder = interactionRecorder;
     }
 
+    // overflow by source nodes
+    private Map<InteractionNode, ServiceLoadMap> overflowPool = new HashMap<>();
 
     public Result initialize() {
-        var overflowPool = new ServiceLoadMap();
         var processedLoad = new ServiceLoadMap();
         var internalProcessedLoad = new ServiceLoadMap();
 
         // process initial load on child nodes
         for (var childNode : childNodes) {
             var result = childNode.initialize();
-            overflowPool.add(result.getInducedOverflow());
+
+            overflowPool.put(childNode, new ServiceLoadMap(result.getInducedOverflow()));
+
             processedLoad.add(result.getProcessedLoad());
             internalProcessedLoad.add(result.getInternalProcessedLoad());
         }
@@ -31,24 +43,20 @@ public class AggregatingInteractionNode extends InteractionNode {
         this.totalProcessedLoad.add(processedLoad);
 
         // process induced overflow and count processed load as internal interaction
-        var result = this.process(overflowPool);
-        var processedOverflow = result.getProcessedLoad();
+        var result = this.process(Map.of());
+        assert result.getProcessedLoad().isEmpty();
         var internalProcessedOverflow = result.getInternalProcessedLoad();
-        var additionalOverflow = result.getInducedOverflow();
+        var overflow = result.getInducedOverflow();
 
-        overflowPool.deduct(processedOverflow); // TODO record latency
-        this.totalOverflow.add(overflowPool); // record remaining overflow before adding additional overflow
-        overflowPool.add(additionalOverflow);
         internalProcessedLoad.add(result.getProcessedLoad());
         internalProcessedLoad.add(internalProcessedOverflow);
 
-        return new Result(overflowPool, processedLoad, internalProcessedLoad, result.isHasProcessed());
+        return new Result(overflow, processedLoad, internalProcessedLoad, result.isHasProcessed());
     }
 
     public Result process(final Map<Service, Double> loadPerService) {
         var remainingLoad = new ServiceLoadMap(loadPerService);
         var processedLoad = new ServiceLoadMap();
-        var overflowPool = new ServiceLoadMap();
         var internalProcessedLoad = new ServiceLoadMap();
 
         var hasProcessedAtLeastOnce = false;
@@ -56,25 +64,34 @@ public class AggregatingInteractionNode extends InteractionNode {
 
         while (isProcessing) { // if nothing could be processed anymore: no change, stop processing
             isProcessing = false;
-            for (var childNode : childNodes) {
-                var overflowResult = childNode.process(overflowPool);
-                var processedOverflow = overflowResult.getProcessedLoad();
-                var internalProcessedOverflow = overflowResult.getInternalProcessedLoad();
-                var inducedOverflowByOverflow = overflowResult.getInducedOverflow();
-                internalProcessedLoad.add(processedOverflow);
-                internalProcessedLoad.add(internalProcessedOverflow);
-                overflowPool.deduct(processedOverflow); // TODO record latency
-                overflowPool.add(inducedOverflowByOverflow);
+            for (var targetNode : childNodes) {
 
-                var loadResult = childNode.process(remainingLoad); // TODO distribute among nodes by capacity instead of first-fit?
+                var clonedPool = new HashMap<>(overflowPool);
+                for (var sourceNode : clonedPool.entrySet()) {
+                    var sourcePool = sourceNode.getValue();
+                    var overflowResult = targetNode.process(sourcePool);
+                    var processedOverflow = overflowResult.getProcessedLoad();
+                    internalProcessedLoad.add(processedOverflow);
+                    internalProcessedLoad.add(overflowResult.getInternalProcessedLoad());
+
+                    var distanceLatency = distanceGraph.get(sourceNode.getKey()).get(targetNode);
+                    var processedOverflowSum = processedOverflow.values().stream().mapToDouble(v -> v).sum();
+                    interactionRecorder.record(distanceLatency, processedOverflowSum);
+
+                    sourcePool.deduct(processedOverflow);
+                    addToPool(targetNode, overflowResult.getInducedOverflow());
+
+                    if (overflowResult.isHasProcessed()) {
+                        isProcessing = true;
+                    }
+                }
+
+                var loadResult = targetNode.process(remainingLoad); // TODO distribute load among nodes by capacity instead of first-fit?
                 var processed = loadResult.getProcessedLoad();
-                var internalProcessed = loadResult.getInternalProcessedLoad();
-                var inducedOverflow = loadResult.getInducedOverflow();
-
                 remainingLoad.deduct(processed);
                 processedLoad.add(processed);
-                internalProcessedLoad.add(internalProcessed);
-                overflowPool.add(inducedOverflow);
+                internalProcessedLoad.add(loadResult.getInternalProcessedLoad());
+                addToPool(targetNode, loadResult.getInducedOverflow());
 
                 if (loadResult.isHasProcessed()) {
                     isProcessing = true;
@@ -86,11 +103,20 @@ public class AggregatingInteractionNode extends InteractionNode {
             }
         }
 
+        var remainingOverflow = new ServiceLoadMap();
+        overflowPool.values().forEach(remainingOverflow::add);
+        overflowPool.clear();
 
         this.totalProcessedLoad.add(processedLoad);
         this.totalProcessedLoad.add(internalProcessedLoad);
-        this.totalOverflow.add(overflowPool);
-        return new Result(overflowPool, processedLoad, internalProcessedLoad, hasProcessedAtLeastOnce);
+        this.totalOverflow.add(remainingOverflow);
+        return new Result(remainingOverflow, processedLoad, internalProcessedLoad, hasProcessedAtLeastOnce);
+    }
+
+    private void addToPool(InteractionNode sourceNode, Map<Service, Double> loadMap) {
+        var sourceNodePool = overflowPool.getOrDefault(sourceNode, new ServiceLoadMap());
+        sourceNodePool.add(loadMap);
+        overflowPool.put(sourceNode, sourceNodePool);
     }
 
 }

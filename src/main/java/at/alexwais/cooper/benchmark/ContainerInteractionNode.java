@@ -14,7 +14,7 @@ public class ContainerInteractionNode extends InteractionNode {
     private double initialLoad;
 
     public ContainerInteractionNode(String label, Model model, ContainerType container, double initialLoad) {
-        super(label, 0, model);
+        super(label, model);
         this.initialLoad = initialLoad;
         this.service = container.getService();
         this.freeCapacity = container.getRpmCapacity().doubleValue();

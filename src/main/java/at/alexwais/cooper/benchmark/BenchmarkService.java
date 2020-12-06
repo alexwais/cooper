@@ -14,22 +14,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class BenchmarkService {
 
-    private InteractionSimulation simulation;
+    private Model model;
     private String outputFileName;
 
     private Map<Integer, BenchmarkRecord> records = new HashMap<>();
 
     @Autowired
     public BenchmarkService(Model model, @Value("${cooper.benchmarkOutput}") String outputFileName) {
-        this.simulation = new InteractionSimulation(model);
+        this.model = model;
         this.outputFileName = outputFileName;
     }
 
 
     public void addRecord(BenchmarkRecord record) {
-        if (record.getOptimizationResult() != null) {
-            simulation.simulate(record.getOptimizationResult().getAllocation(), record.getOptimizationResult().getUnderlyingMeasures());
-        }
+        // TODO proper time of records?...
+//        if (record.getLastOptimizationResult() != null) {
+            var simulation = new InteractionSimulation(model, record.getLastOptimizationResult().getAllocation(), record.getMeasures());
+            simulation.simulate();
+            var avgLatency = simulation.getInteractionRecorder().getAverageLatency();
+            record.setAvgLatency(avgLatency);
+//        }
         this.records.put(record.getT(), record);
     }
 

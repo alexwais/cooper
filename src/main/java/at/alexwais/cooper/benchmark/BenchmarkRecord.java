@@ -7,50 +7,59 @@ import at.alexwais.cooper.scheduler.dto.OptimizationResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 
-@AllArgsConstructor
-@JsonPropertyOrder({"t", "cost", "opt", "fitness", "neutralFitness", "runtime"})
+@RequiredArgsConstructor
+@JsonPropertyOrder({"t", "cost", "avgLatency", "opt", "fitness", "neutralFitness", "runtime"})
 public class BenchmarkRecord {
 
     @Getter
-    private int t;
+    private final int t;
 
     public float getCost() {
         return currentAllocation.getTotalCost();
     }
 
+    @Getter
+    @Setter
+    private Double avgLatency = null;
+
     public boolean getOpt() {
-        return optimizationResult != null;
+        return currentOptimizationResult != null;
     }
 
     public Float getFitness() {
-        return optimizationResult == null ? null : optimizationResult.getFitness();
+        return currentOptimizationResult == null ? null : currentOptimizationResult.getFitness();
     }
 
     public Float getNeutralFitness() {
-        return optimizationResult == null ? null : optimizationResult.getNeutralFitness();
+        return currentOptimizationResult == null ? null : currentOptimizationResult.getNeutralFitness();
     }
 
     public Integer getRuntime() {
-        return optimizationResult == null ? null : optimizationResult.getRuntimeInMilliseconds().intValue();
+        return currentOptimizationResult == null ? null : currentOptimizationResult.getRuntimeInMilliseconds().intValue();
     }
 
 
     @Getter
     @JsonIgnore
-    private SystemMeasures measures;
+    private final SystemMeasures measures;
 
-    private AnalysisResult analysisResult;
-
-    @Getter
-    @JsonIgnore
-    private OptimizationResult optimizationResult;
+    private final AnalysisResult analysisResult;
 
     @Getter
     @JsonIgnore
-    private Allocation currentAllocation;
+    private final OptimizationResult currentOptimizationResult;
+
+    @Getter
+    @JsonIgnore
+    private final OptimizationResult lastOptimizationResult;
+
+    @Getter
+    @JsonIgnore
+    private final Allocation currentAllocation;
 
 }

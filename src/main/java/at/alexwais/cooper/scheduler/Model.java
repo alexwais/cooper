@@ -48,11 +48,13 @@ public class Model {
     }
 
     public double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
-        if (vmA == vmB) return 0;
+        if (vmA == vmB) return 1; // TODO 0 vs. 1?
+        return getDistanceBetween(vmA.getDataCenter(), vmB.getDataCenter());
+    }
 
-        var edge = dataCenterDistanceGraph.getEdge(vmA.getDataCenter().getName(), vmB.getDataCenter().getName());
-        var distance = dataCenterDistanceGraph.getEdgeWeight(edge);
-        return distance;
+    public double getDistanceBetween(DataCenter dcA, DataCenter dcB) {
+        var edge = dataCenterDistanceGraph.getEdge(dcA.getName(), dcB.getName());
+        return dataCenterDistanceGraph.getEdgeWeight(edge);
     }
 
 }

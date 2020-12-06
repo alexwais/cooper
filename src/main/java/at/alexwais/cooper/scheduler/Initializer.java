@@ -26,7 +26,8 @@ public class Initializer {
     private WeightedPseudograph<String, DefaultWeightedEdge> dataCenterDistanceGraph;
 
     public Initializer(int multiplicator, DataCenterConfigMap dataCenterConfig, DataCenterDistanceConfigList distanceConfig, ServiceConfigMap serviceConfig) {
-        this.instanceCount = Math.max(multiplicator, 2); // TODO finalize/document
+        // below x1.5 -> invalid solutions by cplex
+        this.instanceCount = Math.max((int) (multiplicator * 1.5), 2); // TODO finalize/document
         initDataCenters(dataCenterConfig);
         initServices(serviceConfig);
         initDownstreamRequestMultiplier(serviceConfig);
