@@ -1,5 +1,7 @@
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.Validator;
@@ -11,6 +13,8 @@ import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.RetryConstraint;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
@@ -46,7 +50,7 @@ public class GeneticAlgorithm implements Optimizer {
 
     }
 
-    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
+    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
@@ -64,7 +68,7 @@ public class GeneticAlgorithm implements Optimizer {
         var constraint = repairConstraint;
 
         Engine<DistributedIntegerGene, Float> engine1 = Engine
-                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures), serviceRowCodec)
+                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures, imageCacheState), serviceRowCodec)
                 .constraint(constraint)
                 .minimizing()
                 .populationSize(300)

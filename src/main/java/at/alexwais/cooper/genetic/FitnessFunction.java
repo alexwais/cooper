@@ -1,9 +1,13 @@
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,6 +22,7 @@ public class FitnessFunction {
     private static final int W_GRACE_PERIOD_WASTE = 500;
     private static final float W_DISTANCE = 0.1f;
     private static final float W_OVER_PROVISIONING = 0.1f;
+    private static final float W_CONTAINER_IMAGE_CACHING = 0.1f;
 
 
     /**
@@ -28,10 +33,10 @@ public class FitnessFunction {
      * @return
      */
     public float evalNeutral(Allocation resourceAllocation, SystemMeasures measures) {
-        return eval(resourceAllocation, null, measures);
+        return eval(resourceAllocation, null, measures, null);
     }
 
-    public float eval(Allocation resourceAllocation, Allocation previousAllocation, SystemMeasures measures) {
+    public float eval(Allocation resourceAllocation, Allocation previousAllocation, SystemMeasures measures, Map<VmInstance, Set<Service>> imageCacheState) {
 //        var simulation = new InteractionSimulation(model, resourceAllocation, measures);
 //        try {
 //            simulation.simulate();
@@ -72,7 +77,7 @@ public class FitnessFunction {
         }
 
         // Term 4 - Minimize Over-Provisioning
-        var overProvisionedCapacity = 0;
+        long overProvisionedCapacity = 0L;
         var allocatedContainersByService = resourceAllocation.getAllocatedContainersByService();
         for (var allocatedServiceInstances : allocatedContainersByService.entrySet()) {
             var service = allocatedServiceInstances.getKey();
@@ -87,7 +92,17 @@ public class FitnessFunction {
             overProvisionedCapacity += overProvisionedServiceCapacity;
         }
 
-        int violations = 0;
+        // Term 5 - Container Image Caching
+        long uncachedContainers = 0L;
+        if (imageCacheState != null) {
+            for (var alloc : resourceAllocation.getAllocatedTuples()) {
+                var isImageCached = imageCacheState.getOrDefault(alloc.getVm(), Set.of())
+                        .contains(alloc.getContainer().getService());
+                if (!isImageCached) uncachedContainers++;
+            }
+        }
+
+        long violations = 0L;
         if (previousAllocation == null) {
             violations = validator.neutralViolations(resourceAllocation, measures.getTotalServiceLoad());
         } else {
@@ -99,8 +114,9 @@ public class FitnessFunction {
         var term2_gracePeriodCost = gracePeriodCost * W_GRACE_PERIOD_WASTE;
         var term3_distance = distanceBonus * W_DISTANCE;
         var term4_overProvisioning = overProvisionedCapacity * W_OVER_PROVISIONING;
+        var term5_uncachedContainerImages = uncachedContainers * W_CONTAINER_IMAGE_CACHING;
 
-        var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning
+        var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning + term5_uncachedContainerImages
                 + violations * 10_000_000f;
 
         return fitness;

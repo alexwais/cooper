@@ -13,7 +13,6 @@ import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
 import at.alexwais.cooper.scheduler.dto.OptimizationResult;
-import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -86,7 +85,7 @@ public class Planner {
                 return noOpExecution(state.getCurrentTargetAllocation());
             }
 
-            var optimizationResult = optimize(state.getCurrentTargetAllocation(), state.getCurrentSystemMeasures());
+            var optimizationResult = optimize(state.getCurrentTargetAllocation(), state);
             var reallocationPlan = buildReallocationPlan(optimizationResult, state);
             var resultingTargetAllocation = applyReallocation(state.getCurrentTargetAllocation(), reallocationPlan);
 
@@ -143,7 +142,8 @@ public class Planner {
     }
 
 
-    private OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures) {
+    private OptimizationResult optimize(Allocation previousAllocation, State state) {
+        var measures = state.getCurrentSystemMeasures();
 //        var greedyOptimizer = new GreedyOptimizer(model, state);
 //        var greedyResult = greedyOptimizer.optimize(state);
 //        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state.getCurrentSystemMeasures()));
@@ -152,21 +152,21 @@ public class Planner {
 
         switch (config.getAlgorithm()) {
             case GA:
-                var geneticResult = geneticOptimizer.optimize(previousAllocation, systemMeasures);
+                var geneticResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 optimizationResult = geneticResult;
                 break;
             case CPLEX:
-                var ilpResult = ilpOptimizer.optimize(previousAllocation, systemMeasures);
-                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, systemMeasures));
+                var ilpResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
+                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
                 optimizationResult = ilpResult;
                 break;
         }
 
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, systemMeasures.getTotalServiceLoad())) {
+        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, measures.getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }
 
-        var neutralFitness = fitnessFunction.evalNeutral(optimizationResult.getAllocation(), systemMeasures);
+        var neutralFitness = fitnessFunction.evalNeutral(optimizationResult.getAllocation(), measures);
         optimizationResult.setNeutralFitness(neutralFitness);
 
 //        greedyOptimizations.add(greedyResult);

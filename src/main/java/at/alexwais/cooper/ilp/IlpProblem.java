@@ -1,12 +1,16 @@
 package at.alexwais.cooper.ilp;
 
 import at.alexwais.cooper.config.OptimizationConfig;
+import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import ilog.concert.IloException;
 import ilog.cplex.IloCplex;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
@@ -17,6 +21,7 @@ public class IlpProblem {
     private final Model model;
     private final Allocation previousAllocation;
     private final SystemMeasures systemMeasures;
+    private final Map<VmInstance, Set<Service>> imageCacheState;
 
     private final OptimizationConfig config;
 
@@ -24,11 +29,12 @@ public class IlpProblem {
     private final Variables variables;
 
 
-    public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures, OptimizationConfig config) {
+    public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState, OptimizationConfig config) {
         this.model = model;
         this.config = config;
         this.previousAllocation = previousAllocation;
         this.systemMeasures = systemMeasures;
+        this.imageCacheState = imageCacheState;
 
         try {
             this.cplex = new IloCplex();
@@ -128,11 +134,25 @@ public class IlpProblem {
             objectiveTerm4.add(serviceTerm);
         }
 
+        var objectiveTerm5 = cplex.linearNumExpr();
+        for (var s : model.getServices().values()) {
+            for (var cs : s.getContainerTypes()) {
+                for (var k : model.getVms().values()) {
+                    var decisionVariable = variables.getDecisionVariable(cs, k); // x_(cs,k)
+                    var isImageCached = imageCacheState.getOrDefault(k, Set.of()).contains(s); // I_s,k
+                    if (!isImageCached) {
+                        objectiveTerm5.addTerm(decisionVariable, 1);
+                    }
+                }
+            }
+        }
+
         // TODO finalize/document
         var objectiveFunction = cplex.sum(
                 cplex.prod(objectiveTerm1, 1),
                 cplex.prod(objectiveTerm2, 0.2),
-                cplex.prod(objectiveTerm4, 0.000001)
+                cplex.prod(objectiveTerm4, 0.000001),
+                cplex.prod(objectiveTerm5, 0.0001)
         );
         if (config.isEnableColocation()) {
             objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, 0.001));

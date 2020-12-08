@@ -13,7 +13,7 @@ import lombok.Setter;
 
 
 @RequiredArgsConstructor
-@JsonPropertyOrder({"t", "cost", "avgLatency", "opt", "fitness", "neutralFitness", "runtime"})
+@JsonPropertyOrder({"t", "cost", "avgLatency", "opt", "imageDownloads", "fitness", "neutralFitness", "runtime"})
 public class BenchmarkRecord {
 
     @Getter
@@ -26,6 +26,9 @@ public class BenchmarkRecord {
     @Getter
     @Setter
     private Double avgLatency = null;
+
+    @Getter
+    private final Long imageDownloads;
 
     public boolean getOpt() {
         return currentOptimizationResult != null;

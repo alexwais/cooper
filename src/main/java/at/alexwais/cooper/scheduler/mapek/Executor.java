@@ -74,10 +74,12 @@ public class Executor {
             var providerVmId = providerState.getLeasedProviderVms().get(a.getVm());
             var providerId = scheduler.launchContainer(1, a.getContainer().getMemory(), providerVmId);
             providerState.allocateContainerInstance(a, providerId);
+            state.updateCacheState(a.getVm(), a.getContainer().getService());
         });
 
         vmsToKill.forEach(vm -> {
             var providerId = providerState.getLeasedProviderVms().get(vm);
+            state.resetCacheState(vm);
             scheduler.terminateVm(providerId);
             providerState.releaseVm(vm);
         });

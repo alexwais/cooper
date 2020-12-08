@@ -145,6 +145,7 @@ public class SchedulingCycle {
             var minute = currentClock / 60;
             var record = new BenchmarkRecord(
                     (int) minute,
+                    currentState.getImageDownloads(),
                     currentState.getCurrentSystemMeasures(),
                     currentState.getCurrentAnalysisResult(),
                     executionPlan.getOptimizationResult(),
