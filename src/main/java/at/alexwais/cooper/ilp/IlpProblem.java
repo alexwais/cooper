@@ -29,6 +29,15 @@ public class IlpProblem {
     private final Variables variables;
 
 
+    private static final int W_C = 1;
+    private static final double W_G = 0.2;
+    private static final double W_A = 0.001;
+    private static final double W_Q = 0.000001;
+    private static final double W_I = 0.0001;
+    private static final double G = 0.00001;
+    private static final int M = 1_000;
+
+
     public IlpProblem(Model model, Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState, OptimizationConfig config) {
         this.model = model;
         this.config = config;
@@ -85,7 +94,7 @@ public class IlpProblem {
             objectiveTerm1.addTerm(k.getType().getCost(), vmAllocationVariable);
 
             var vmGracePeriodVariable = variables.getVmGracePeriodVariable(k);
-            objectiveTerm2.addTerm(k.getType().getCost() + 0.01, vmGracePeriodVariable); // TODO constraint for grace period cost? (like for vmAllocationVariable)
+            objectiveTerm2.addTerm(k.getType().getCost() + G, vmGracePeriodVariable); // TODO constraint for grace period cost? (like for vmAllocationVariable)
         }
 
         var objectiveTerm3 = cplex.linearNumExpr();
@@ -149,13 +158,13 @@ public class IlpProblem {
 
         // TODO finalize/document
         var objectiveFunction = cplex.sum(
-                cplex.prod(objectiveTerm1, 1),
-                cplex.prod(objectiveTerm2, 0.2),
-                cplex.prod(objectiveTerm4, 0.000001),
-                cplex.prod(objectiveTerm5, 0.0001)
+                cplex.prod(objectiveTerm1, W_C),
+                cplex.prod(objectiveTerm2, W_G),
+                cplex.prod(objectiveTerm4, W_Q),
+                cplex.prod(objectiveTerm5, W_I)
         );
         if (config.isEnableColocation()) {
-            objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, 0.001));
+            objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, W_A));
         }
 
         cplex.addMinimize(objectiveFunction);
@@ -335,12 +344,12 @@ public class IlpProblem {
 
             var rightSide = cplex.linearNumExpr();
             var vmAllocatedVariable = variables.getVmAllocationVariable(k);
-            rightSide.addTerm(vmAllocatedVariable, 1_000);
+            rightSide.addTerm(vmAllocatedVariable, M);
 
             cplex.addLe(leftSide, rightSide);
         }
 
-        // new constraint TODO
+        // Constraint 4.15
         for (var k : model.getVms().values()) {
             var sum = cplex.linearNumExpr();
             for (var c : model.getContainerTypes()) {
@@ -357,7 +366,7 @@ public class IlpProblem {
         }
 
 
-        // Constraint 4.15
+        // Constraint 4.16
         for (var k : model.getVms().values()) {
             var leftSide = variables.getVmGracePeriodVariable(k);
 
@@ -376,6 +385,7 @@ public class IlpProblem {
         }
 
 
+        // Constraint 4.17
         if (config.isEnableColocation()) {
             for (var wrapper : variables.getConcurrentAllocationVariables()) {
                 var decisionVariable1 = variables.getDecisionVariable(wrapper.getC1(), wrapper.getK1());

@@ -102,7 +102,7 @@ public class FitnessFunction {
             }
         }
 
-        long violations = 0L;
+        long violations;
         if (previousAllocation == null) {
             violations = validator.neutralViolations(resourceAllocation, measures.getTotalServiceLoad());
         } else {
