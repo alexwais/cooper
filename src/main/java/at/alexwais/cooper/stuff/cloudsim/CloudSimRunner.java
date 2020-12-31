@@ -1,8 +1,8 @@
 package at.alexwais.cooper.stuff.cloudsim;
 
-import at.alexwais.cooper.csp.CloudProvider;
+import at.alexwais.cooper.api.CloudController;
+import at.alexwais.cooper.csp.Cloud;
 import at.alexwais.cooper.csp.Listener;
-import at.alexwais.cooper.csp.Scheduler;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.cloudbus.cloudsim.brokers.DatacenterBroker;
@@ -24,7 +24,7 @@ import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudsimplus.builders.tables.CloudletsTableBuilder;
 
 @Slf4j
-public class CloudSimRunner implements CloudProvider {
+public class CloudSimRunner implements Cloud {
 
     /**
      * Defines the time (in seconds) to run the simulation for.
@@ -52,7 +52,7 @@ public class CloudSimRunner implements CloudProvider {
     private boolean terminationRequested = false;
     private double prevTick = -1d;
     private Map<Listener, Long> invokedClockTicks = new HashMap<>();
-    private Scheduler scheduler = new CloudSimScheduler();
+    private CloudController cloudController = new CloudSimCloudController();
 
 
     @Override
@@ -145,7 +145,7 @@ public class CloudSimRunner implements CloudProvider {
 
             if (matchesCycleInterval && notInvokedBefore) {
                 invokedClockTicks.put(l, clockTick);
-                l.cycleElapsed(clockTick, scheduler);
+                l.cycleElapsed(clockTick, cloudController);
             }
         });
     }
@@ -166,7 +166,7 @@ public class CloudSimRunner implements CloudProvider {
         return vm;
     }
 
-    private class CloudSimScheduler implements Scheduler {
+    private class CloudSimCloudController implements CloudController {
         @Override
         public long launchVm(String type, String datacenter) {
             return CloudSimRunner.this.launchVm(type, datacenter).getId();

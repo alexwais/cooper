@@ -4,7 +4,7 @@ import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.genetic.FitnessFunction;
-import at.alexwais.cooper.genetic.GeneticAlgorithm;
+import at.alexwais.cooper.genetic.GeneticAlgorithmOptimizer;
 import at.alexwais.cooper.ilp.IlpOptimizer;
 import at.alexwais.cooper.scheduler.MapUtils;
 import at.alexwais.cooper.scheduler.Model;
@@ -12,7 +12,7 @@ import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -29,13 +29,13 @@ public class Planner {
     private final Validator validator;
     private final OptimizationConfig config;
     private final FitnessFunction fitnessFunction;
-    private final GeneticAlgorithm geneticOptimizer;
+    private final GeneticAlgorithmOptimizer geneticOptimizer;
     private final IlpOptimizer ilpOptimizer;
 
     @Getter
-    private final List<OptimizationResult> greedyOptimizations = new ArrayList<>();
+    private final List<OptResult> greedyOptimizations = new ArrayList<>();
     @Getter
-    private final List<OptimizationResult> optimizations = new ArrayList<>();
+    private final List<OptResult> optimizations = new ArrayList<>();
 
 
     private static final float DRIFT_TOLERANCE = 2.0f; // percentage
@@ -48,7 +48,7 @@ public class Planner {
         @Setter
         private int step = 0;
 
-        private final OptimizationResult optimizationResult;
+        private final OptResult optResult;
         private final List<VmInstance> vmLaunchList;
         private final List<Pair<VmInstance, ContainerType>> containerLaunchList;
         private final Map<VmInstance, List<ContainerType>> replacedContainers; // replaced during vertical container scaling within same vm
@@ -61,7 +61,7 @@ public class Planner {
         this.validator = validator;
         this.config = config;
         this.fitnessFunction = new FitnessFunction(model, validator);
-        this.geneticOptimizer = new GeneticAlgorithm(model, validator);
+        this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, validator);
         this.ilpOptimizer = new IlpOptimizer(model, config);
     }
 
@@ -73,7 +73,7 @@ public class Planner {
         if (isInGracePeriod) {
             var resultingTargetAllocation = applyReallocation(state.getCurrentTargetAllocation(), currentReallocation);
             if (currentReallocation.getStep() == 4) {
-                var drainedTargetAllocation = currentReallocation.optimizationResult.getAllocation();
+                var drainedTargetAllocation = currentReallocation.optResult.getAllocation();
                 currentReallocation = null;
                 // the final (drained) target allocation will be enforced after the current cycle completed
                 return new ExecutionPlan(resultingTargetAllocation, drainedTargetAllocation);
@@ -142,45 +142,45 @@ public class Planner {
     }
 
 
-    private OptimizationResult optimize(Allocation previousAllocation, State state) {
+    private OptResult optimize(Allocation previousAllocation, State state) {
         var measures = state.getCurrentSystemMeasures();
 //        var greedyOptimizer = new GreedyOptimizer(model, state);
 //        var greedyResult = greedyOptimizer.optimize(state);
 //        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state.getCurrentSystemMeasures()));
 
-        OptimizationResult optimizationResult = null;
+        OptResult optResult = null;
 
         switch (config.getAlgorithm()) {
             case GA:
                 var geneticResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
-                optimizationResult = geneticResult;
+                optResult = geneticResult;
                 break;
             case CPLEX:
                 var ilpResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
-                optimizationResult = ilpResult;
+                optResult = ilpResult;
                 break;
         }
 
-        if (!validator.isAllocationValid(optimizationResult.getAllocation(), previousAllocation, measures.getTotalServiceLoad())) {
+        if (!validator.isAllocationValid(optResult.getAllocation(), previousAllocation, measures.getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }
 
-        var neutralFitness = fitnessFunction.evalNeutral(optimizationResult.getAllocation(), measures);
-        optimizationResult.setNeutralFitness(neutralFitness);
+        var neutralFitness = fitnessFunction.evalNeutral(optResult.getAllocation(), measures);
+        optResult.setNeutralFitness(neutralFitness);
 
 //        greedyOptimizations.add(greedyResult);
-        optimizations.add(optimizationResult);
+        optimizations.add(optResult);
 
-        return optimizationResult;
+        return optResult;
     }
 
-    private ReallocationPlan buildReallocationPlan(OptimizationResult optimizationResult, State state) {
+    private ReallocationPlan buildReallocationPlan(OptResult optResult, State state) {
         List<VmInstance> vmLaunchList = new ArrayList<>();
 
         model.getVms().forEach((vmId, vm) -> {
             var isRunning = state.getCurrentTargetAllocation().getRunningVms().contains(vm);
-            var shouldRun = optimizationResult.getAllocation().getRunningVms().contains(vm);
+            var shouldRun = optResult.getAllocation().getRunningVms().contains(vm);
 
             if (!isRunning && shouldRun) {
                 vmLaunchList.add(vm);
@@ -192,7 +192,7 @@ public class Planner {
         List<Pair<VmInstance, ContainerType>> containerLaunchList = new ArrayList<>();
         Map<VmInstance, List<ContainerType>> scaledContainersToRemove = new HashMap<>();
 
-        optimizationResult.getAllocation().getTuples().stream()
+        optResult.getAllocation().getTuples().stream()
                 .forEach(a -> {
                     var allocate = a.isAllocate();
                     var containersRunningOnVm = state.getCurrentTargetAllocation().getAllocationMap().getOrDefault(a.getVm(), new ArrayList<>());
@@ -214,7 +214,7 @@ public class Planner {
                     }
                 });
 
-        return new ReallocationPlan(optimizationResult, vmLaunchList, containerLaunchList, scaledContainersToRemove);
+        return new ReallocationPlan(optResult, vmLaunchList, containerLaunchList, scaledContainersToRemove);
     }
 
     private Allocation applyReallocation(Allocation currentTargetAllocation, ReallocationPlan reallocationPlan) {

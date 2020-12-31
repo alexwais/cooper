@@ -1,38 +1,39 @@
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.api.Optimizer;
+import at.alexwais.cooper.domain.ContainerType;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.*;
-import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
-import io.jenetics.engine.RetryConstraint;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
 
 @Slf4j
-public class GeneticAlgorithm implements Optimizer {
+public class GeneticAlgorithmOptimizer implements Optimizer {
 
     private final Model model;
-//    private final State state;
+    //    private final State state;
 //    private final Mapping mapping;
-     private final Validator validator;
+    private final Validator validator;
     private final FitnessFunction fitnessFunction;
 
 //     private final RetryConstraint<DistributedIntegerGene, Float> constraint;
 //    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
 
 
-    public GeneticAlgorithm(Model model, Validator validator) {
+    public GeneticAlgorithmOptimizer(Model model, Validator validator) {
         this.model = model;
 
 //        this.mapping = new Mapping(model, state);
@@ -50,30 +51,39 @@ public class GeneticAlgorithm implements Optimizer {
 
     }
 
-    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {
+    public OptResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {
         var stopWatch = new StopWatch();
         stopWatch.start();
 
-        var mapping = new ChromosomeMapping(model, systemMeasures);
-        var serviceRowCodec = Codec.of(mapping.serviceRowGenotypeFactory(), mapping::serviceRowSquareDecoder);
+        var codec = new AllocationCodec(model, systemMeasures);
+//        var serviceRowCodec = Codec.of(mapping::serviceRowGenotypeFactory, mapping::serviceRowSquareDecoder);
 
-        var retryConstraint = new RetryConstraint<DistributedIntegerGene, Float>(
-                p -> validator.calcOverallocatedVmViolations(new Allocation(model, serviceRowCodec.decode(p.genotype())), previousAllocation) == 0,
-                mapping.serviceRowGenotypeFactory(),
-                3
-        );
-        var repairConstraint = new RepairingConstraint(model, systemMeasures, validator, mapping, previousAllocation);
+//        var retryConstraint = new RetryConstraint<DistributedIntegerGene, Float>(
+//                p -> validator.calcOverallocatedVmViolations(new Allocation(model, serviceRowCodec.decode(p.genotype())), previousAllocation) == 0,
+//                mapping.serviceRowGenotypeFactory(),
+//                3
+//        );
+        var repairingConstraint = new RepairingConstraint(model, systemMeasures, validator, codec, previousAllocation);
 
         // TODO test retry vs. repair
-        var constraint = repairConstraint;
+//        var constraint = repairConstraint;
 
-        Engine<DistributedIntegerGene, Float> engine1 = Engine
-                .builder(allocationMap -> fitnessFunction.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures, imageCacheState), serviceRowCodec)
-                .constraint(constraint)
+        var fitnessFunction = new Function<Map<VmInstance, List<ContainerType>>, Float>() {
+            @Override
+            public Float apply(Map<VmInstance, List<ContainerType>> allocationMap) {
+                var f = new FitnessFunction(model, validator);
+                return f.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures, imageCacheState);
+            }
+        };
+
+        var bestPhenotype = Engine
+                .builder(fitnessFunction, codec)
                 .minimizing()
+                .constraint(repairingConstraint)
                 .populationSize(300)
-                .offspringFraction(0.5)
-                .selector(
+                .survivorsFraction(0.5)
+                .maximalPhenotypeAge(100)
+                .survivorsSelector(
                         new EliteSelector<>(1,
                                 new TournamentSelector<DistributedIntegerGene, Float>(3)
                         )
@@ -82,26 +92,24 @@ public class GeneticAlgorithm implements Optimizer {
                         new RouletteWheelSelector<>()
                 )
                 .alterers(
-                        new UniformCrossover<>(0.2, 0.2),
-                        new Mutator<>(0.05),
-                        new SwapMutator<>(0.05)
+                        new UniformCrossover<>(0.05, 0.05),
+                        new SwapMutator<>(0.05),
+                        new Mutator<>(0.05)
                 )
-                .maximalPhenotypeAge(100)
-                .build();
-
-        var phenotype = engine1.stream()
+                .build()
+                .stream()
                 // at least 250 generations AND a valid result must be found
 //                .limit(new ValidatedGenerationLimit(250, mapping, allocationMap ->
 //                        validator.isAllocationValid(new Allocation(model, allocationMap), previousAllocation, systemMeasures.getTotalServiceLoad())))
                 .limit(250)
                 .collect(EvolutionResult.toBestPhenotype());
 
-        log.debug("Result fitness: {}", phenotype.fitness());
+        log.debug("Result fitness: {}", bestPhenotype.fitness());
 
-        var decodedAllocationMapping = serviceRowCodec.decode(phenotype.genotype());
+        var decodedAllocationMapping = codec.decode(bestPhenotype.genotype());
 
         stopWatch.stop();
-        return new OptimizationResult(model, systemMeasures, decodedAllocationMapping, phenotype.fitness(), stopWatch.getTotalTimeMillis());
+        return new OptResult(model, systemMeasures, decodedAllocationMapping, bestPhenotype.fitness(), stopWatch.getTotalTimeMillis());
     }
 
 

@@ -1,4 +1,4 @@
-package at.alexwais.cooper.scheduler.simulated;
+package at.alexwais.cooper.simulated;
 
 import at.alexwais.cooper.scheduler.Model;
 import java.io.BufferedReader;

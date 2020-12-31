@@ -1,4 +1,4 @@
-package at.alexwais.cooper.scheduler.simulated;
+package at.alexwais.cooper.simulated;
 
 import java.util.HashMap;
 import java.util.Map;

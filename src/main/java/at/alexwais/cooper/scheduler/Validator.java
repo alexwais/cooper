@@ -101,7 +101,6 @@ public class Validator {
     }
 
 
-
     public Map<Service, Long> missingCapacityPerService(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
         return serviceLoad.entrySet().stream()
                 .collect(Collectors.toMap(e -> model.getServices().get(e.getKey()),

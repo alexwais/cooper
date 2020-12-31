@@ -1,6 +1,6 @@
 package at.alexwais.cooper.scheduler.mapek;
 
-import at.alexwais.cooper.csp.Scheduler;
+import at.alexwais.cooper.api.CloudController;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.State;
@@ -19,7 +19,7 @@ public class Executor {
     }
 
 
-    public void execute(Scheduler scheduler, Allocation newTargetAllocation, State state) {
+    public void execute(CloudController cloudController, Allocation newTargetAllocation, State state) {
         var providerState = state.getProviderState();
         List<VmInstance> vmsToLaunch = new ArrayList<>();
         List<VmInstance> vmsToKill = new ArrayList<>();
@@ -54,7 +54,7 @@ public class Executor {
                 });
 
         vmsToLaunch.forEach(vm -> {
-            var providerId = scheduler.launchVm(vm.getType().getLabel(), "DC-1");
+            var providerId = cloudController.launchVm(vm.getType().getLabel(), "DC-1");
             providerState.getLeasedProviderVms().put(vm, providerId);
         });
 
@@ -66,13 +66,13 @@ public class Executor {
                     .orElseThrow();
 
             var providerContainerId = providerState.getRunningProviderContainers().get(runningContainer);
-            scheduler.terminateContainer(providerContainerId);
+            cloudController.terminateContainer(providerContainerId);
             providerState.deallocateContainerInstance(runningContainer);
         });
 
         containersToStart.forEach(a -> {
             var providerVmId = providerState.getLeasedProviderVms().get(a.getVm());
-            var providerId = scheduler.launchContainer(1, a.getContainer().getMemory(), providerVmId);
+            var providerId = cloudController.launchContainer(1, a.getContainer().getMemory(), providerVmId);
             providerState.allocateContainerInstance(a, providerId);
             state.updateCacheState(a.getVm(), a.getContainer().getService());
         });
@@ -80,7 +80,7 @@ public class Executor {
         vmsToKill.forEach(vm -> {
             var providerId = providerState.getLeasedProviderVms().get(vm);
             state.resetCacheState(vm);
-            scheduler.terminateVm(providerId);
+            cloudController.terminateVm(providerId);
             providerState.releaseVm(vm);
         });
     }

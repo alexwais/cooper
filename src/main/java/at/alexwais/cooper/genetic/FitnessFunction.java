@@ -18,11 +18,13 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
+    // TODO /1000
     private static final int W_COST = 1000;
     private static final int W_GRACE_PERIOD_WASTE = 500;
     private static final float W_DISTANCE = 0.1f;
     private static final float W_OVER_PROVISIONING = 0.1f;
     private static final float W_CONTAINER_IMAGE_CACHING = 0.1f;
+    private static final float W_CONSTRAINT_VIOLATIONS = 10_000_000f;
 
 
     /**
@@ -116,8 +118,10 @@ public class FitnessFunction {
         var term4_overProvisioning = overProvisionedCapacity * W_OVER_PROVISIONING;
         var term5_uncachedContainerImages = uncachedContainers * W_CONTAINER_IMAGE_CACHING;
 
+        var term6_constraintViolations = violations * W_CONSTRAINT_VIOLATIONS;
+
         var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning + term5_uncachedContainerImages
-                + violations * 10_000_000f;
+                + term6_constraintViolations;
 
         return fitness;
     }

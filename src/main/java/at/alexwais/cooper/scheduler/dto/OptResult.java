@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode
-public class OptimizationResult {
+public class OptResult {
 
     private Allocation allocation;
     private SystemMeasures underlyingMeasures;
@@ -19,19 +19,19 @@ public class OptimizationResult {
     private Long runtimeInMilliseconds;
 
 
-    public OptimizationResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Long runtimeInMilliseconds) {
+    public OptResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Long runtimeInMilliseconds) {
         this.underlyingMeasures = underlyingMeasures;
         this.allocation = new Allocation(model, allocationMapping);
         this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
-    public OptimizationResult(Model model, SystemMeasures underlyingMeasures, List<Allocation.AllocationTuple> allocationTuples, Long runtimeInMilliseconds) {
+    public OptResult(Model model, SystemMeasures underlyingMeasures, List<Allocation.AllocationTuple> allocationTuples, Long runtimeInMilliseconds) {
         this.underlyingMeasures = underlyingMeasures;
         this.allocation = new Allocation(model, allocationTuples);
         this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
-    public OptimizationResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Float fitness, Long runtimeInMilliseconds) {
+    public OptResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Float fitness, Long runtimeInMilliseconds) {
         this(model, underlyingMeasures, allocationMapping, runtimeInMilliseconds);
         this.fitness = fitness;
     }

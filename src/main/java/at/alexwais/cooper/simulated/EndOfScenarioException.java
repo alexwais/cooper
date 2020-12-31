@@ -1,4 +1,4 @@
-package at.alexwais.cooper.scheduler.simulated;
+package at.alexwais.cooper.simulated;
 
 public class EndOfScenarioException extends Exception {
 

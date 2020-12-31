@@ -4,7 +4,7 @@ import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +26,7 @@ public class State {
     @Setter
     private AnalysisResult currentAnalysisResult;
     @Setter
-    private OptimizationResult lastOptimizationResult;
+    private OptResult lastOptResult;
 
     // Load measured by Monitor
     @Setter

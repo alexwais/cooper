@@ -1,22 +1,22 @@
 package at.alexwais.cooper.scheduler;
 
 import at.alexwais.cooper.ConsoleTable;
+import at.alexwais.cooper.api.CloudController;
+import at.alexwais.cooper.api.MonitoringController;
 import at.alexwais.cooper.benchmark.BenchmarkRecord;
 import at.alexwais.cooper.benchmark.BenchmarkService;
 import at.alexwais.cooper.config.OptimizationConfig;
-import at.alexwais.cooper.csp.CloudProvider;
+import at.alexwais.cooper.csp.Cloud;
 import at.alexwais.cooper.csp.Listener;
-import at.alexwais.cooper.csp.Scheduler;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.ExecutionPlan;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import at.alexwais.cooper.scheduler.mapek.Analyzer;
 import at.alexwais.cooper.scheduler.mapek.Executor;
-import at.alexwais.cooper.scheduler.mapek.Monitor;
 import at.alexwais.cooper.scheduler.mapek.Planner;
-import at.alexwais.cooper.scheduler.simulated.EndOfScenarioException;
-import at.alexwais.cooper.scheduler.simulated.SimulatedCloudProvider;
+import at.alexwais.cooper.simulated.EndOfScenarioException;
+import at.alexwais.cooper.simulated.SimulatedCloud;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,12 +30,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class SchedulingCycle {
 
-    private final CloudProvider cloudProvider = new SimulatedCloudProvider();
+    private final Cloud cloud = new SimulatedCloud();
     private final Validator validator;
 
     // MAPE-K (Monitor - Analyze - Plan - Execute)
     @Autowired
-    private Monitor monitor;
+    private MonitoringController monitor;
     private final Analyzer analyzer;
     private final Planner planner;
     private final Executor executor;
@@ -66,14 +66,14 @@ public class SchedulingCycle {
 
     public void run() {
         var listener = new SchedulingListener();
-        cloudProvider.registerListener(listener);
-        cloudProvider.run();
+        cloud.registerListener(listener);
+        cloud.run();
     }
 
 
     class SchedulingListener implements Listener {
         @Override
-        public void cycleElapsed(long clock, Scheduler scheduler) {
+        public void cycleElapsed(long clock, CloudController cloudController) {
             currentClock = clock;
 
             logCycleTimestamp();
@@ -82,7 +82,7 @@ public class SchedulingCycle {
             // A new Optimization may take place immediately after grace period (with containers/VMs still running).
             if (drainedTargetAllocation != null) {
                 log.info("Applying final target allocation after draining period...");
-                executor.execute(scheduler, drainedTargetAllocation, currentState);
+                executor.execute(cloudController, drainedTargetAllocation, currentState);
                 currentState.setCurrentTargetAllocation(drainedTargetAllocation);
                 drainedTargetAllocation = null;
                 log.info("Final target allocation after grace period:");
@@ -92,7 +92,7 @@ public class SchedulingCycle {
             try {
                 monitor();
             } catch (EndOfScenarioException e) {
-                scheduler.abort();
+                cloudController.abort();
                 tearDown();
                 try {
                     benchmarkService.print();
@@ -108,14 +108,14 @@ public class SchedulingCycle {
             var executionPlan = planner.plan(currentState);
 
             if (executionPlan.isReallocation()) {
-                executor.execute(scheduler, executionPlan.getTargetAllocation(), currentState);
+                executor.execute(cloudController, executionPlan.getTargetAllocation(), currentState);
                 currentState.setCurrentTargetAllocation(executionPlan.getTargetAllocation());
 
                 if (executionPlan.getDrainedTargetAllocation() != null) {
                     drainedTargetAllocation = executionPlan.getDrainedTargetAllocation();
                 }
-                if (executionPlan.getOptimizationResult() != null) {
-                    currentState.setLastOptimizationResult(executionPlan.getOptimizationResult());
+                if (executionPlan.getOptResult() != null) {
+                    currentState.setLastOptResult(executionPlan.getOptResult());
                 }
             }
 
@@ -148,8 +148,8 @@ public class SchedulingCycle {
                     currentState.getImageDownloads(),
                     currentState.getCurrentSystemMeasures(),
                     currentState.getCurrentAnalysisResult(),
-                    executionPlan.getOptimizationResult(),
-                    currentState.getLastOptimizationResult(),
+                    executionPlan.getOptResult(),
+                    currentState.getLastOptResult(),
                     currentState.getCurrentTargetAllocation()
             );
             benchmarkService.addRecord(record);
@@ -165,7 +165,7 @@ public class SchedulingCycle {
 //                .reduce(0f, Float::sum);
 
         var totalGeneticFitness = planner.getOptimizations().stream()
-                .map(OptimizationResult::getFitness)
+                .map(OptResult::getFitness)
                 .reduce(0f, Float::sum);
 //        var totalGreedyFitness = planner.getGreedyOptimizations().stream()
 //                .map(OptimizationResult::getFitness)

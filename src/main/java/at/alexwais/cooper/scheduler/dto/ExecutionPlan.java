@@ -14,7 +14,7 @@ public class ExecutionPlan {
 
     private final Allocation targetAllocation;
     private final Allocation drainedTargetAllocation;
-    private final OptimizationResult optimizationResult;
+    private final OptResult optResult;
 
     private final List<String> vmsToLaunch;
     private final List<String> vmsToTerminate;
@@ -27,7 +27,7 @@ public class ExecutionPlan {
         this.isReallocation = true;
         this.targetAllocation = targetAllocation;
         this.drainedTargetAllocation = null;
-        this.optimizationResult = null;
+        this.optResult = null;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
         this.containersToStart = null;
@@ -37,17 +37,17 @@ public class ExecutionPlan {
         this.isReallocation = true;
         this.targetAllocation = targetAllocation;
         this.drainedTargetAllocation = drainedTargetAllocation;
-        this.optimizationResult = null;
+        this.optResult = null;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
         this.containersToStart = null;
         this.containersToStop = null;
     }
-    public ExecutionPlan(Allocation targetAllocation, OptimizationResult optimizationResult) {
+    public ExecutionPlan(Allocation targetAllocation, OptResult optResult) {
         this.isReallocation = true;
         this.targetAllocation = targetAllocation;
         this.drainedTargetAllocation = null;
-        this.optimizationResult = optimizationResult;
+        this.optResult = optResult;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
         this.containersToStart = null;
@@ -58,7 +58,7 @@ public class ExecutionPlan {
         this.isReallocation = isReallocation;
         this.targetAllocation = targetAllocation;
         this.drainedTargetAllocation = null;
-        this.optimizationResult = null;
+        this.optResult = null;
         this.vmsToLaunch = null;
         this.vmsToTerminate = null;
         this.containersToStart = null;

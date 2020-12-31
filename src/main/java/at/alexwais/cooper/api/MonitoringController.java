@@ -1,10 +1,10 @@
-package at.alexwais.cooper.scheduler.mapek;
+package at.alexwais.cooper.api;
 
 import at.alexwais.cooper.scheduler.dto.MonitoringResult;
-import at.alexwais.cooper.scheduler.simulated.EndOfScenarioException;
+import at.alexwais.cooper.simulated.EndOfScenarioException;
 
 
-public interface Monitor {
+public interface MonitoringController {
 
     MonitoringResult getCurrentLoad(int elapsedSeconds) throws EndOfScenarioException;
 

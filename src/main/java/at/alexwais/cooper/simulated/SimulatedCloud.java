@@ -1,18 +1,18 @@
-package at.alexwais.cooper.scheduler.simulated;
+package at.alexwais.cooper.simulated;
 
-import at.alexwais.cooper.csp.CloudProvider;
+import at.alexwais.cooper.api.CloudController;
+import at.alexwais.cooper.csp.Cloud;
 import at.alexwais.cooper.csp.Listener;
-import at.alexwais.cooper.csp.Scheduler;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-public class SimulatedCloudProvider implements CloudProvider {
+public class SimulatedCloud implements Cloud {
 
     private final List<Listener> listeners = new ArrayList<>();
-    private final Scheduler scheduler = new StubScheduler();
+    private final CloudController cloudController = new StubCloudController();
     private boolean terminationRequested = false;
     private long clock = 0L;
 
@@ -38,14 +38,14 @@ public class SimulatedCloudProvider implements CloudProvider {
 
     private void tick() {
         listeners.forEach(l -> {
-                l.cycleElapsed(clock, scheduler);
+                l.cycleElapsed(clock, cloudController);
         });
 
         clock += CYCLE_INTERVAL;
     }
 
 
-    private class StubScheduler implements Scheduler {
+    private class StubCloudController implements CloudController {
         private long vmIdSequence = 0L;
         private long containerIdSequence = 0L;
         private List<Long> vmList = new ArrayList<>();

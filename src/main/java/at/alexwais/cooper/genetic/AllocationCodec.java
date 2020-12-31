@@ -6,14 +6,18 @@ import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.Genotype;
+import io.jenetics.engine.Codec;
+import io.jenetics.util.Factory;
 import io.jenetics.util.ISeq;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import lombok.Getter;
-import org.apache.commons.math3.distribution.EnumeratedIntegerDistribution;
 
 @Getter
-public class ChromosomeMapping {
+public class AllocationCodec implements Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> {
 
     private final Model model;
     private final SystemMeasures systemMeasures;
@@ -23,9 +27,8 @@ public class ChromosomeMapping {
     private final Map<VmInstance, Integer> vmsIndex = new HashMap<>();
     private final Map<Service, Integer> servicesIndex = new HashMap<>();
 
-    private static final double LOAD_SHARE_BUFFER = 1d;
 
-    public ChromosomeMapping(Model model, SystemMeasures systemMeasures) {
+    public AllocationCodec(Model model, SystemMeasures systemMeasures) {
         this.model = model;
         this.systemMeasures = systemMeasures;
         this.vmCount = model.getVms().size();
@@ -42,6 +45,18 @@ public class ChromosomeMapping {
             servicesIndex.put(serviceTypes.next(), s);
         }
     }
+
+
+    @Override
+    public Factory<Genotype<DistributedIntegerGene>> encoding() {
+        return this::serviceRowGenotypeFactory;
+    }
+
+    @Override
+    public Function<Genotype<DistributedIntegerGene>, Map<VmInstance, List<ContainerType>>> decoder() {
+        return this::serviceRowSquareDecoder;
+    }
+
 
     public Map<VmInstance, List<ContainerType>> serviceRowSquareDecoder(Genotype<DistributedIntegerGene> gt) {
         var matrix = gt.stream()
@@ -88,7 +103,7 @@ public class ChromosomeMapping {
 
         return Genotype.of(
                 model.getServices().values().stream()
-                        .map(s -> chromosome(s, serviceVmMatrix[servicesIndex.get(s)]))
+                        .map(s -> DistributedIntegerChromosome.of(s, serviceVmMatrix[servicesIndex.get(s)], model, systemMeasures))
                         .collect(ISeq.toISeq())
         );
     }
@@ -96,59 +111,9 @@ public class ChromosomeMapping {
     public Genotype<DistributedIntegerGene> serviceRowGenotypeFactory() {
         return Genotype.of(
                 model.getServices().values().stream()
-                        .map(s -> chromosome(s, vmCount))
+                        .map(s -> DistributedIntegerChromosome.of(s, vmCount, model, systemMeasures))
                         .collect(ISeq.toISeq())
         );
-    }
-
-
-    private DistributedIntegerChromosome chromosome(Service service, int length) {
-        var containerDistribution = computeContainerDistribution(service);
-
-        return DistributedIntegerChromosome.of(containerDistribution, length);
-    }
-
-    private DistributedIntegerChromosome chromosome(Service service, int[] geneValues) {
-        var containerDistribution = computeContainerDistribution(service);
-
-        var genes = Arrays.stream(geneValues)
-                .mapToObj(v -> DistributedIntegerGene.of(v, containerDistribution))
-                .toArray(DistributedIntegerGene[]::new);
-        return DistributedIntegerChromosome.of(genes, containerDistribution);
-    }
-
-    private EnumeratedIntegerDistribution computeContainerDistribution(Service service) {
-        var containersOfService = service.getContainerTypes();
-        var containerCount = containersOfService.size();
-        var serviceShare = shareOfServiceLoadToOverallCapacity(service) * LOAD_SHARE_BUFFER;
-        var containerShare = serviceShare / containerCount;
-
-        // 1-based container index to probability
-        var probabilityMap = containersOfService.stream()
-                .collect(Collectors.toMap(c -> containersOfService.indexOf(c) + 1, c -> containerShare));
-
-        var totalServiceProbability = probabilityMap.values().stream()
-                .reduce(0d, Double::sum);
-        var noAllocationProbability = 1 - totalServiceProbability;
-        probabilityMap.put(0, noAllocationProbability);
-
-        var indexArray = probabilityMap.keySet().stream().mapToInt(i -> i).toArray();
-        var probabilityArray = probabilityMap.values().stream().mapToDouble(d -> d).toArray();
-        var containerDistribution = new EnumeratedIntegerDistribution(indexArray, probabilityArray);
-        return containerDistribution;
-    }
-
-    private double shareOfServiceLoadToOverallCapacity(Service service) {
-        var overallServiceLoad = systemMeasures.getTotalServiceLoad().get(service.getName());
-        var containerTypeCount = service.getContainerTypes().size();
-        var overallCapacityForService = service.getContainerTypes().stream()
-                // one container type per service can be allocated once on a VM
-                // TODO test with/without containerTypeCount
-                .map(t -> t.getRpmCapacity() * vmCount / containerTypeCount)
-                .reduce(0L, Long::sum);
-        var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?
-
-        return loadToCapacityRatio;
     }
 
 }

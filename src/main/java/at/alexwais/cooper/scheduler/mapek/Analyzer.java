@@ -6,7 +6,7 @@ import at.alexwais.cooper.scheduler.State;
 import at.alexwais.cooper.scheduler.Validator;
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import java.util.Collections;
 import java.util.Map;
@@ -29,7 +29,7 @@ public class Analyzer {
     }
 
     public AnalysisResult analyze(State state) {
-        var lastOptimization = state.getLastOptimizationResult();
+        var lastOptimization = state.getLastOptResult();
         var currentAllocation = state.getCurrentSystemMeasures().getCurrentAllocation();
         var currentMeasures = state.getCurrentSystemMeasures();
 
@@ -55,7 +55,7 @@ public class Analyzer {
     }
 
 
-    private Float computeFitnessChangePercentage(SystemMeasures measures, OptimizationResult lastOptimization) {
+    private Float computeFitnessChangePercentage(SystemMeasures measures, OptResult lastOptimization) {
         if (lastOptimization == null) {
             return 0f;
         }
@@ -88,7 +88,7 @@ public class Analyzer {
     }
 
 
-    private Map<String, Float> computeLoadDrift(SystemMeasures currentMeasures, OptimizationResult lastOptimization) {
+    private Map<String, Float> computeLoadDrift(SystemMeasures currentMeasures, OptResult lastOptimization) {
         if (lastOptimization == null) {
             return Collections.emptyMap();
         }
@@ -103,7 +103,7 @@ public class Analyzer {
         return driftPerService;
     }
 
-    private Map<String, Float> computeCapacityDrift(SystemMeasures currentMeasures, OptimizationResult lastOptimization) {
+    private Map<String, Float> computeCapacityDrift(SystemMeasures currentMeasures, OptResult lastOptimization) {
         if (lastOptimization == null) {
             return Collections.emptyMap();
         }

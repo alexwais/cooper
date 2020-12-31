@@ -3,7 +3,7 @@ package at.alexwais.cooper.benchmark;
 
 import at.alexwais.cooper.scheduler.dto.Allocation;
 import at.alexwais.cooper.scheduler.dto.AnalysisResult;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -31,19 +31,19 @@ public class BenchmarkRecord {
     private final Long imageDownloads;
 
     public boolean getOpt() {
-        return currentOptimizationResult != null;
+        return currentOptResult != null;
     }
 
     public Float getFitness() {
-        return currentOptimizationResult == null ? null : currentOptimizationResult.getFitness();
+        return currentOptResult == null ? null : currentOptResult.getFitness();
     }
 
     public Float getNeutralFitness() {
-        return currentOptimizationResult == null ? null : currentOptimizationResult.getNeutralFitness();
+        return currentOptResult == null ? null : currentOptResult.getNeutralFitness();
     }
 
     public Integer getRuntime() {
-        return currentOptimizationResult == null ? null : currentOptimizationResult.getRuntimeInMilliseconds().intValue();
+        return currentOptResult == null ? null : currentOptResult.getRuntimeInMilliseconds().intValue();
     }
 
 
@@ -55,11 +55,11 @@ public class BenchmarkRecord {
 
     @Getter
     @JsonIgnore
-    private final OptimizationResult currentOptimizationResult;
+    private final OptResult currentOptResult;
 
     @Getter
     @JsonIgnore
-    private final OptimizationResult lastOptimizationResult;
+    private final OptResult lastOptResult;
 
     @Getter
     @JsonIgnore

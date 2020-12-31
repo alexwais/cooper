@@ -29,7 +29,7 @@ public class BenchmarkService {
     public void addRecord(BenchmarkRecord record) {
         // TODO proper time of records?...
 //        if (record.getLastOptimizationResult() != null) {
-            var simulation = new InteractionSimulation(model, record.getLastOptimizationResult().getAllocation(), record.getMeasures());
+            var simulation = new InteractionSimulation(model, record.getLastOptResult().getAllocation(), record.getMeasures());
             simulation.simulate();
             var avgLatency = simulation.getInteractionRecorder().getAverageLatency();
             record.setAvgLatency(avgLatency);

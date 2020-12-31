@@ -1,8 +1,8 @@
-package at.alexwais.cooper.scheduler.simulated;
+package at.alexwais.cooper.simulated;
 
+import at.alexwais.cooper.api.MonitoringController;
 import at.alexwais.cooper.scheduler.Model;
 import at.alexwais.cooper.scheduler.dto.MonitoringResult;
-import at.alexwais.cooper.scheduler.mapek.Monitor;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class SimulatedCspMonitor implements Monitor {
+public class SimulatedMonitoringController implements MonitoringController {
 
     private final Model model;
     private final Deque<LoadRecord> loadFixture = new ArrayDeque<>();
@@ -23,7 +23,7 @@ public class SimulatedCspMonitor implements Monitor {
     private LoadRecord latestRecord;
 
     @Autowired
-    public SimulatedCspMonitor(Model model, @Value("${cooper.loadFixture}") String loadFixtureFilename) {
+    public SimulatedMonitoringController(Model model, @Value("${cooper.loadFixture}") String loadFixtureFilename) {
         this.model = model;
         var loader = new CsvLoader(model);
         var loadRecords = loader.load(loadFixtureFilename);

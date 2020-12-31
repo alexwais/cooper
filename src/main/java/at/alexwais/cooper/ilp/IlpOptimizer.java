@@ -1,21 +1,19 @@
 package at.alexwais.cooper.ilp;
 
+import at.alexwais.cooper.api.Optimizer;
 import at.alexwais.cooper.config.OptimizationConfig;
 import at.alexwais.cooper.domain.Service;
 import at.alexwais.cooper.domain.VmInstance;
 import at.alexwais.cooper.scheduler.Model;
-import at.alexwais.cooper.scheduler.Optimizer;
 import at.alexwais.cooper.scheduler.dto.Allocation;
-import at.alexwais.cooper.scheduler.dto.OptimizationResult;
+import at.alexwais.cooper.scheduler.dto.OptResult;
 import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import ilog.cplex.IloCplex;
 import java.util.Map;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StopWatch;
 
 
-@Slf4j
 public class IlpOptimizer implements Optimizer {
 
     private final Model model;
@@ -27,8 +25,8 @@ public class IlpOptimizer implements Optimizer {
     }
 
 
-    public OptimizationResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {
-        var problem = new IlpProblem(model, previousAllocation, systemMeasures, imageCacheState, config);
+    public OptResult optimize(Allocation currentAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> cachedImages) {
+        var problem = new IlpProblem(model, currentAllocation, systemMeasures, cachedImages, config);
 
         var params = new IloCplex.ParameterSet();
         // TODO https://www.ibm.com/support/pages/node/397111 + reference?
@@ -45,7 +43,7 @@ public class IlpOptimizer implements Optimizer {
 
         stopWatch.stop();
 
-        return new OptimizationResult(model, systemMeasures, allocationTuples, stopWatch.getTotalTimeMillis());
+        return new OptResult(model, systemMeasures, allocationTuples, stopWatch.getTotalTimeMillis());
     }
 
 }

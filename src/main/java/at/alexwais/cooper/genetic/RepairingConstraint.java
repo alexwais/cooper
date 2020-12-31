@@ -24,11 +24,11 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
     private final Model model;
     private final SystemMeasures measures;
     private final Validator validator;
-    private final ChromosomeMapping mapping;
+    private final AllocationCodec mapping;
     private final Allocation previousAllocation;
 
 
-    public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final ChromosomeMapping mapping, final Allocation previousAllocation) {
+    public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final AllocationCodec mapping, final Allocation previousAllocation) {
         this.model = model;
         this.measures = measures;
         this.validator = validator;
@@ -42,7 +42,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         var genotype = individual.genotype();
         var allocationToTest = new Allocation(model, mapping.serviceRowSquareDecoder(genotype));
 
-        // TODO test overalloc vs. underprovisioning vs. both
+        // TODO test overalloc vs. underprovisioning vs. both?
         // for now only consider overallocation...
         var valid = validator.calcOverallocatedVmViolations(allocationToTest, previousAllocation) == 0;
 //        var valid = validator.isAllocationValid(allocationToTest, previousAllocation, measures.getTotalServiceLoad());
@@ -57,10 +57,14 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         Map<VmInstance, List<ContainerType>> repairedAllocation = new HashMap<>();
 		List<ContainerType> containersToMove = new ArrayList<>();
 
+		var allocations = new ArrayList<>(allocation.getAllocationMap().entrySet());
+        Collections.shuffle(allocations);
+
 		// Remove excess containers from VMs
-        for (Map.Entry<VmInstance, List<ContainerType>> e : allocation.getAllocationMap().entrySet()) {
+        for (var e : allocations) {
             var vm = e.getKey();
             var containers = e.getValue();
+            Collections.shuffle(containers);
 
             var previousContainers = previousAllocation.getAllocatedContainersOnVm(vm).stream()
                     .map(Allocation.AllocationTuple::getContainer)

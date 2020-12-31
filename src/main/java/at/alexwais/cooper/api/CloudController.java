@@ -1,8 +1,8 @@
-package at.alexwais.cooper.csp;
+package at.alexwais.cooper.api;
 
-public interface Scheduler {
+public interface CloudController {
 
-    long launchVm(String type, String datacenter);
+    long launchVm(String type, String dataCenter);
 
     void terminateVm(long id);
 

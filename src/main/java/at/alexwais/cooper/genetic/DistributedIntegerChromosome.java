@@ -19,8 +19,13 @@
  */
 package at.alexwais.cooper.genetic;
 
+import at.alexwais.cooper.domain.Service;
+import at.alexwais.cooper.scheduler.Model;
+import at.alexwais.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.NumericChromosome;
 import io.jenetics.util.ISeq;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.apache.commons.math3.distribution.EnumeratedIntegerDistribution;
 
 /**
@@ -67,22 +72,20 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 		return of(_distribution, _length);
 	}
 
+	@Override
+	public DistributedIntegerGene get(int index) {
+		return _seq.get(index);
+	}
+
+	@Override
+	public int length() {
+		return _seq.length();
+	}
+
 
 	/* *************************************************************************
 	 * Static factory methods.
 	 * ************************************************************************/
-
-	/**
-	 * Create a new {@code DistributedIntegerChromosome} with the given genes.
-	 *
-	 * @param genes the genes of the chromosome.
-	 * @return a new chromosome with the given genes.
-	 * @throws IllegalArgumentException if the length of the genes array is
-	 *         empty or the given {@code genes} doesn't have the same range.
-	 */
-	public static DistributedIntegerChromosome of(final DistributedIntegerGene[] genes, final EnumeratedIntegerDistribution distribution) {
-		return new DistributedIntegerChromosome(ISeq.of(genes), distribution, genes.length);
-	}
 
 	/**
 	 * Create a new random chromosome.
@@ -105,14 +108,54 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 		return new DistributedIntegerChromosome(values, distribution, length);
 	}
 
-	@Override
-	public DistributedIntegerGene get(int index) {
-		return _seq.get(index);
+	public static DistributedIntegerChromosome of(Service service, int length, Model model, SystemMeasures systemMeasures) {
+		var containerDistribution = computeContainerDistribution(service, model, systemMeasures);
+
+		final ISeq<DistributedIntegerGene> values = DistributedIntegerGene.seq(containerDistribution, length);
+		return new DistributedIntegerChromosome(values, containerDistribution, length);
 	}
 
-	@Override
-	public int length() {
-		return _seq.length();
+	public static DistributedIntegerChromosome of(Service service, int[] geneValues, Model model, SystemMeasures systemMeasures) {
+		var containerDistribution = computeContainerDistribution(service, model, systemMeasures);
+
+		var genes = Arrays.stream(geneValues)
+				.mapToObj(v -> DistributedIntegerGene.of(v, containerDistribution))
+				.toArray(DistributedIntegerGene[]::new);
+		return new DistributedIntegerChromosome(ISeq.of(genes), containerDistribution, genes.length);
+	}
+
+	private static EnumeratedIntegerDistribution computeContainerDistribution(Service service, Model model, SystemMeasures systemMeasures) {
+		var containersOfService = service.getContainerTypes();
+		var containerCount = containersOfService.size();
+		var serviceShare = shareOfServiceLoadToOverallCapacity(service, model, systemMeasures); // * LOAD_SHARE_BUFFER; // TODO buffer not used
+		var containerShare = serviceShare / containerCount;
+
+		// 1-based container index to probability
+		var probabilityMap = containersOfService.stream()
+				.collect(Collectors.toMap(c -> containersOfService.indexOf(c) + 1, c -> containerShare));
+
+		var totalServiceProbability = probabilityMap.values().stream()
+				.reduce(0d, Double::sum);
+		var noAllocationProbability = 1 - totalServiceProbability;
+		probabilityMap.put(0, noAllocationProbability);
+
+		var indexArray = probabilityMap.keySet().stream().mapToInt(i -> i).toArray();
+		var probabilityArray = probabilityMap.values().stream().mapToDouble(d -> d).toArray();
+		var containerDistribution = new EnumeratedIntegerDistribution(indexArray, probabilityArray);
+		return containerDistribution;
+	}
+
+	private static double shareOfServiceLoadToOverallCapacity(Service service, Model model, SystemMeasures systemMeasures) {
+		var overallServiceLoad = systemMeasures.getTotalServiceLoad().get(service.getName());
+		var containerTypeCount = service.getContainerTypes().size();
+		var overallCapacityForService = service.getContainerTypes().stream()
+				// one container type per service can be allocated once on a VM
+				// TODO test with/without containerTypeCount
+				.map(t -> t.getRpmCapacity() * model.getVms().size() / containerTypeCount)
+				.reduce(0L, Long::sum);
+		var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?
+
+		return loadToCapacityRatio;
 	}
 
 }
