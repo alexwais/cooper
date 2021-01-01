@@ -47,7 +47,7 @@ public class IlpProblem {
 
         try {
             this.cplex = new IloCplex();
-            variables = new Variables(model, cplex, config.isEnableColocation());
+            variables = new Variables(model, cplex, config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C);
             buildObjectiveFunction();
             buildConstraints();
         } catch (IloException e) {
@@ -94,7 +94,7 @@ public class IlpProblem {
             objectiveTerm1.addTerm(k.getType().getCost(), vmAllocationVariable);
 
             var vmGracePeriodVariable = variables.getVmGracePeriodVariable(k);
-            objectiveTerm2.addTerm(k.getType().getCost() + G, vmGracePeriodVariable); // TODO constraint for grace period cost? (like for vmAllocationVariable)
+            objectiveTerm2.addTerm(k.getType().getCost() + G, vmGracePeriodVariable);
         }
 
         var objectiveTerm3 = cplex.linearNumExpr();
@@ -156,14 +156,13 @@ public class IlpProblem {
             }
         }
 
-        // TODO finalize/document
         var objectiveFunction = cplex.sum(
                 cplex.prod(objectiveTerm1, W_C),
                 cplex.prod(objectiveTerm2, W_G),
                 cplex.prod(objectiveTerm4, W_Q),
                 cplex.prod(objectiveTerm5, W_I)
         );
-        if (config.isEnableColocation()) {
+        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C) {
             objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, W_A));
         }
 
@@ -386,7 +385,7 @@ public class IlpProblem {
 
 
         // Constraint 4.17
-        if (config.isEnableColocation()) {
+        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C) {
             for (var wrapper : variables.getConcurrentAllocationVariables()) {
                 var decisionVariable1 = variables.getDecisionVariable(wrapper.getC1(), wrapper.getK1());
                 var decisionVariable2 = variables.getDecisionVariable(wrapper.getC2(), wrapper.getK2());

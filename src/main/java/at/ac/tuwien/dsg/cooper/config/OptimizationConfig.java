@@ -10,12 +10,12 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class OptimizationConfig {
 
-    private OptimizationAlgorithm algorithm;
-    private boolean enableColocation;
+    private OptimizationAlgorithm strategy;
 
     public enum OptimizationAlgorithm {
         GA,
-        CPLEX
+        ILP_C,
+        ILP_NC
     }
 
 }

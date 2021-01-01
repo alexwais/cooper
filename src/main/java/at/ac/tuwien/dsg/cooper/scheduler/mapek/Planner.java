@@ -150,12 +150,13 @@ public class Planner {
 
         OptResult optResult = null;
 
-        switch (config.getAlgorithm()) {
+        switch (config.getStrategy()) {
             case GA:
                 var geneticResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 optResult = geneticResult;
                 break;
-            case CPLEX:
+            case ILP_C:
+            case ILP_NC:
                 var ilpResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
                 optResult = ilpResult;

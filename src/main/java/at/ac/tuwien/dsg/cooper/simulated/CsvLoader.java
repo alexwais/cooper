@@ -2,7 +2,7 @@ package at.ac.tuwien.dsg.cooper.simulated;
 
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,10 +47,10 @@ public class CsvLoader {
 
     private List<List<String>> loadCsv(String fileName) {
         try {
-            var file = new ClassPathResource(fileName).getFile();
+            var fileInput = new ClassPathResource(fileName).getInputStream();
             var records = new ArrayList<List<String>>();
 
-            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(fileInput))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     var values = line.split(COMMA_DELIMITER);

@@ -4,16 +4,19 @@ logging:
     at.alexwais.cooper: DEBUG
     org.springframework.boot.autoconfigure: ERROR
 
+
+# For each scenario, a profile configuration ('scenario-*.yaml') and load fixture csv file (scenario-*@*x.csv) is to be created.
+# Run the app by setting the following Spring Boot properties at runtime:
+scenario: undefined
+strategy: GA
+multiplicator: 1
+
 cooper:
-  scenario: ${spring.profiles.active}
-  multiplicator: 1
+  scenario: scenario-${scenario}
+  multiplicator: ${multiplicator}
   loadFixture: ${cooper.scenario}@${cooper.multiplicator}x.csv
   benchmarkOutput: ${cooper.scenario}@${cooper.multiplicator}x.csv
   optimization:
-    algorithm: CPLEX
-    enableColocation: true
+    strategy: ${strategy}
+
 spring.config.import: ${cooper.scenario}.yml
-
-
-# For each scenario, a profile configuration ('scenario-*.yaml') and load fixture csv file (scenario-*@*x.csv) is to be created.
-# Run Spring Boot using the scenario name as profile to switch between different profiles.
