@@ -53,3 +53,10 @@ $ java -jar \
 * `-Dscenario`: The scenario configuration to use.
 * `-Dstrategy`: The optimization strategy applied. Availavble values: `ILP-C` | `ILP-NC` | `GA`
 * `-Dmultiplicator`: An integer multiplication factor for load fixture. `1` | `10` | `100`
+
+
+### License
+
+Apache License Version 2.0
+
+Copyright (C) Alexander Wais
