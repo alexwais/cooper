@@ -27,7 +27,7 @@ public class Initializer {
 
     public Initializer(int multiplicator, DataCenterConfigMap dataCenterConfig, DataCenterDistanceConfigList distanceConfig, ServiceConfigMap serviceConfig) {
         // below x1.5 -> invalid solutions by cplex
-        this.instanceCount = Math.max((int) (multiplicator * 1.5), 2); // TODO finalize/document
+        this.instanceCount = Math.max(multiplicator, 2); // TODO finalize/document
         initDataCenters(dataCenterConfig);
         initServices(serviceConfig);
         initDownstreamRequestMultiplier(serviceConfig);

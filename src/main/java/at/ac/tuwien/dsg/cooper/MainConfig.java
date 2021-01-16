@@ -20,13 +20,15 @@ public class MainConfig {
 	@Autowired
 	private ServiceConfigMap serviceConfig;
 
-	@Value("${cooper.multiplicator}")
-	private Integer multiplicator;
+	@Value("${cooper.scenario-multiplicator}")
+	private Float scenarioMultiplicator;
+	@Value("${cooper.load-multiplicator}")
+	private Integer loadMultiplicator;
 
 
 	@Bean
 	public Model model() {
-		var initializer = new Initializer(multiplicator, dataCenterConfig, distanceConfig, serviceConfig);
+		var initializer = new Initializer((int) (scenarioMultiplicator * loadMultiplicator), dataCenterConfig, distanceConfig, serviceConfig);
 		return new Model(initializer.getDataCenters(), initializer.getServices(), initializer.getInteractionMultiplication(), initializer.getDataCenterDistanceGraph());
 	}
 

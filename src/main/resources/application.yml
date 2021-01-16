@@ -13,9 +13,10 @@ multiplicator: 1
 
 cooper:
   scenario: scenario-${scenario}
-  multiplicator: ${multiplicator}
-  loadFixture: ${cooper.scenario}@${cooper.multiplicator}x.csv
-  benchmarkOutput: ${cooper.scenario}@${cooper.multiplicator}x.csv
+  scenario-multiplicator: 1
+  load-multiplicator: ${multiplicator}
+  loadFixture: ${cooper.scenario}@${cooper.load-multiplicator}x.csv
+  benchmarkOutput: ${cooper.scenario}@${cooper.load-multiplicator}x_${cooper.optimization.strategy}.csv
   optimization:
     strategy: ${strategy}
 

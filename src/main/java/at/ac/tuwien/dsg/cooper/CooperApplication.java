@@ -18,8 +18,8 @@ public class CooperApplication implements CommandLineRunner {
 
 	@Value("${cooper.scenario}")
 	private String scenario;
-	@Value("${cooper.multiplicator}")
-	private Integer multiplicator;
+	@Value("${cooper.load-multiplicator}")
+	private Integer loadMultiplicator;
 
 	@Autowired
 	private SchedulingCycle scheduler;
@@ -27,7 +27,7 @@ public class CooperApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) {
 		log.info("");
-		log.info("EXECUTING COOPER with scenario: {}@{}x", scenario, multiplicator);
+		log.info("EXECUTING COOPER with scenario: {}@{}x", scenario, loadMultiplicator);
 
 		scheduler.run();
 	}

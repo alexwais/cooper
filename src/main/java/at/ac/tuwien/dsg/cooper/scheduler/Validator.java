@@ -86,7 +86,7 @@ public class Validator {
         return !hasEnoughCpuAvailable || !hasEnoughMemoryAvailable;
     }
 
-    private int calcServiceUnderprovisioningViolations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
+    public int calcServiceUnderprovisioningViolations(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
         var violations = 0;
         for (Map.Entry<String, Integer> entry : serviceLoad.entrySet()) {
             var serviceName = entry.getKey();
@@ -110,6 +110,22 @@ public class Validator {
                             var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
                             if (capacity < load) {
                                 return load - capacity;
+                            } else {
+                                return 0L;
+                            }
+                        }
+                ));
+    }
+
+    public Map<Service, Long> overprovisionedCapacityPerService(Allocation resourceAllocation, Map<String, Integer> serviceLoad) {
+        return serviceLoad.entrySet().stream()
+                .collect(Collectors.toMap(e -> model.getServices().get(e.getKey()),
+                        e -> {
+                            var serviceName = e.getKey();
+                            var load = e.getValue();
+                            var capacity = resourceAllocation.getServiceCapacity().getOrDefault(serviceName, 0L);
+                            if (capacity > load) {
+                                return capacity - load;
                             } else {
                                 return 0L;
                             }

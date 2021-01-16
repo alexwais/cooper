@@ -1,15 +1,13 @@
 package at.ac.tuwien.dsg.cooper.scheduler.mapek;
 
+import at.ac.tuwien.dsg.cooper.api.Optimizer;
 import at.ac.tuwien.dsg.cooper.config.OptimizationConfig;
 import at.ac.tuwien.dsg.cooper.domain.ContainerType;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
 import at.ac.tuwien.dsg.cooper.genetic.FitnessFunction;
 import at.ac.tuwien.dsg.cooper.genetic.GeneticAlgorithmOptimizer;
 import at.ac.tuwien.dsg.cooper.ilp.IlpOptimizer;
-import at.ac.tuwien.dsg.cooper.scheduler.MapUtils;
-import at.ac.tuwien.dsg.cooper.scheduler.Model;
-import at.ac.tuwien.dsg.cooper.scheduler.State;
-import at.ac.tuwien.dsg.cooper.scheduler.Validator;
+import at.ac.tuwien.dsg.cooper.scheduler.*;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.ExecutionPlan;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
@@ -29,8 +27,9 @@ public class Planner {
     private final Validator validator;
     private final OptimizationConfig config;
     private final FitnessFunction fitnessFunction;
-    private final GeneticAlgorithmOptimizer geneticOptimizer;
-    private final IlpOptimizer ilpOptimizer;
+    private final Optimizer geneticOptimizer;
+    private final Optimizer ilpOptimizer;
+    private final Optimizer firstFitOptimizer;
 
     @Getter
     private final List<OptResult> greedyOptimizations = new ArrayList<>();
@@ -63,6 +62,7 @@ public class Planner {
         this.fitnessFunction = new FitnessFunction(model, validator);
         this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, validator);
         this.ilpOptimizer = new IlpOptimizer(model, config);
+        this.firstFitOptimizer = new FirstFitOptimizer(model);
     }
 
     private ReallocationPlan currentReallocation = null;
@@ -152,14 +152,18 @@ public class Planner {
 
         switch (config.getStrategy()) {
             case GA:
-                var geneticResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
-                optResult = geneticResult;
+                optResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
             case ILP_C:
             case ILP_NC:
                 var ilpResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
                 optResult = ilpResult;
+                break;
+            case FF:
+                var firstFitResult = firstFitOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
+                firstFitResult.setFitness(fitnessFunction.eval(firstFitResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
+                optResult = firstFitResult;
                 break;
         }
 

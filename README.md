@@ -20,7 +20,7 @@ On macOS, the installation command would look like this:
 $ mvn install:install-file \
     -DgroupId=cplex \
     -DartifactId=cplex \
-    -Dversion=12.10.0  \
+    -Dversion=12.10.0 \
     -Dpackaging=jar \
     -Dfile=/Applications/CPLEX_Studio1210/cplex/lib/cplex.jar
 ```

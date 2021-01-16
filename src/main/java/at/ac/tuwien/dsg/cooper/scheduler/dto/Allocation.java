@@ -29,6 +29,10 @@ public class Allocation {
         this.vmContainerMapping = new HashMap<>();
     }
 
+    public Allocation(Allocation toClone) {
+        this(toClone.model, toClone.getTuples());
+    }
+
     public Allocation(Model model, Map<VmInstance, List<ContainerType>> vmContainerMapping) {
         this(model, vmContainerMapping.keySet(), vmContainerMapping);
     }

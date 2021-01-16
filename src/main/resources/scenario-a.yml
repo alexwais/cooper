@@ -1,3 +1,6 @@
+cooper:
+  scenario-multiplicator: 1.5
+
 dataCenters:
   DC-private:
     onPremise: true
