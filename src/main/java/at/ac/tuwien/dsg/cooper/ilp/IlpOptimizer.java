@@ -31,7 +31,7 @@ public class IlpOptimizer implements Optimizer {
         var params = new IloCplex.ParameterSet();
         // TODO https://www.ibm.com/support/pages/node/397111 + reference?
 //        params.setParam(IloCplex.IntParam.Emphasis.MIP, 3);
-//        params.setParam(IloCplex.DoubleParam.MIP.Tolerances.MIPGap, 0.0001);
+//        params.setParam(IloCplex.DoubleParam.MIP.Tolerances.MIPGap, 0.0025);
 //        params.setParam(IloCplex.DoubleParam.TimeLimit, 20);
 //        params.setParam(IloCplex.IntParam.RootAlgorithm, IloCplex.Algorithm.Primal);
 

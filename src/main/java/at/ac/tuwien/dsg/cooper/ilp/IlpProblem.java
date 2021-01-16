@@ -34,7 +34,7 @@ public class IlpProblem {
     private static final double W_A = 0.001;
     private static final double W_Q = 0.000001;
     private static final double W_I = 0.0001;
-    private static final double G = 0.00001;
+    private static final double G = 0.000001; // with higher G sometimes g(k) is wrong??
     private static final int M = 1_000;
 
 

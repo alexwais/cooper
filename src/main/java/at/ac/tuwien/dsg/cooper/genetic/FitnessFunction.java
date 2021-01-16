@@ -18,7 +18,7 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
-    // TODO /1000
+    // TODO /1000, finalize doc
     private static final int W_COST = 1000;
     private static final int W_GRACE_PERIOD_WASTE = 500;
     private static final float W_DISTANCE = 0.1f;

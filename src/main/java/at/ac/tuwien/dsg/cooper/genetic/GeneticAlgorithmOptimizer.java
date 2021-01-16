@@ -80,7 +80,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
                 .builder(fitnessFunction, codec)
                 .minimizing()
                 .constraint(repairingConstraint)
-                .populationSize(300)
+                .populationSize(100)
                 .survivorsFraction(0.5)
                 .maximalPhenotypeAge(100)
                 .survivorsSelector(
@@ -102,6 +102,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
 //                .limit(new ValidatedGenerationLimit(250, mapping, allocationMap ->
 //                        validator.isAllocationValid(new Allocation(model, allocationMap), previousAllocation, systemMeasures.getTotalServiceLoad())))
                 .limit(250)
+//                .peek(c -> log.info("generation {}", c.generation()))
                 .collect(EvolutionResult.toBestPhenotype());
 
         log.debug("Result fitness: {}", bestPhenotype.fitness());
