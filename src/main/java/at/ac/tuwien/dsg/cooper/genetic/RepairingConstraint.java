@@ -3,6 +3,7 @@ package at.ac.tuwien.dsg.cooper.genetic;
 import at.ac.tuwien.dsg.cooper.domain.ContainerType;
 import at.ac.tuwien.dsg.cooper.domain.Service;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
+import at.ac.tuwien.dsg.cooper.scheduler.FirstFitOptimizer;
 import at.ac.tuwien.dsg.cooper.scheduler.MapUtils;
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
 import at.ac.tuwien.dsg.cooper.scheduler.Validator;
@@ -10,6 +11,8 @@ import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.SystemMeasures;
 import io.jenetics.Phenotype;
 import io.jenetics.engine.Constraint;
+import io.jenetics.internal.math.Randoms;
+import io.jenetics.util.RandomRegistry;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,11 +42,13 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 
     @Override
     public boolean test(final Phenotype<DistributedIntegerGene, Float> individual) {
+        var random = Randoms.nextDouble(0,1, RandomRegistry.random());
+        if (random > 0.2) return true;
+
         var genotype = individual.genotype();
         var allocationToTest = new Allocation(model, mapping.serviceRowSquareDecoder(genotype));
 
-        // TODO test overalloc vs. underprovisioning vs. both?
-        // for now only consider overallocation...
+        // only consider overallocation...
         var valid = validator.calcOverallocatedVmViolations(allocationToTest, previousAllocation) == 0;
 //        var valid = validator.isAllocationValid(allocationToTest, previousAllocation, measures.getTotalServiceLoad());
         return valid;
@@ -60,11 +65,10 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 		var allocations = new ArrayList<>(allocation.getAllocationMap().entrySet());
         Collections.shuffle(allocations);
 
-		// Remove excess containers from VMs
+		// Remove & move excess containers from VMs
         for (var e : allocations) {
             var vm = e.getKey();
             var containers = e.getValue();
-            Collections.shuffle(containers);
 
             var previousContainers = previousAllocation.getAllocatedContainersOnVm(vm).stream()
                     .map(Allocation.AllocationTuple::getContainer)
@@ -76,6 +80,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 				repairedAllocation.put(vm, containers);
 			} else {
             	var repairedContainers = new ArrayList<ContainerType>();
+                Collections.shuffle(containers);
 				for (var container : containers) {
 					var containersToTest = new ArrayList<>(repairedContainers);
 					containersToTest.add(container);
@@ -109,16 +114,26 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         var additionalNeededContainers = new ArrayList<ContainerType>();
         for (var entry : missingServiceCapacity.entrySet()) {
             var service = entry.getKey();
-            var missingCapacity = entry.getValue();
+            var remainingCapacity = entry.getValue();
 
-            while (missingCapacity > 0) {
-                var randomContainer = service.getContainerTypes().stream()
-                        .collect(Collectors.collectingAndThen(Collectors.toList(), collected -> {
-                            Collections.shuffle(collected);
-                            return collected;
-                        })).get(0);
-                additionalNeededContainers.add(randomContainer);
-                missingCapacity -= randomContainer.getRpmCapacity();
+            while (remainingCapacity > 0) {
+                var missingCapacity = remainingCapacity;
+
+                var nextSmallestContainer =  service.getContainerTypes().stream()
+                        .filter(c -> c.getRpmCapacity() < missingCapacity)
+                        .max(Comparator.comparingLong(ContainerType::getRpmCapacity));
+                var nextBiggestContainer = service.getContainerTypes().stream()
+                        .filter(c -> c.getRpmCapacity() >= missingCapacity)
+                        .min(Comparator.comparingLong(ContainerType::getRpmCapacity));
+                var bestFittingContainer = nextBiggestContainer.orElse(nextSmallestContainer.orElse(null));
+
+//                var randomContainer = service.getContainerTypes().stream()
+//                        .collect(Collectors.collectingAndThen(Collectors.toList(), collected -> {
+//                            Collections.shuffle(collected);
+//                            return collected;
+//                        })).get(0);
+                additionalNeededContainers.add(bestFittingContainer);
+                remainingCapacity -= bestFittingContainer.getRpmCapacity();
             }
         }
 
@@ -144,10 +159,12 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
                 .filter(vm -> !abandonedVms.contains(vm))
                 .collect(Collectors.toList());
         var nonAllocatedVms = Stream.concat(abandonedVms.stream(), otherVms.stream())
-                .collect(Collectors.collectingAndThen(Collectors.toList(), collected -> {
-                    Collections.shuffle(collected);
-                    return collected;
-                }));
+                .sorted(Comparator.comparingDouble(vm -> vm.getType().getCost()))
+                .collect(Collectors.toList());
+//                .collect(Collectors.collectingAndThen(Collectors.toList(), collected -> {
+//                    Collections.shuffle(collected);
+//                    return collected;
+//                }));
 
 
         // Try allocating on any other / abandoned VMs
@@ -195,7 +212,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 
             var containersToTest = new ArrayList<>(allocatedContainers);
             containersToTest.add(c);
-            var containerFits = !validator.isVmOverallocated(vm, containersToTest, previousContainers);
+            var containerFits = !validator.isVmOverallocated(vm, containersToTest, previousContainers); // TODO track remaining resources separatly
             if (containerFits) {
                 allocatedContainers.add(c);
                 presentServices.add(c.getService());
