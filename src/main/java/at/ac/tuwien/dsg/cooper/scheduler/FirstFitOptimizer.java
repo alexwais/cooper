@@ -68,7 +68,6 @@ public class FirstFitOptimizer implements Optimizer {
                     var previousOvercapacity = overprovisionedServiceCapacity.get(c.getService());
                     overprovisionedServiceCapacity.put(c.getService(), previousOvercapacity - c.getRpmCapacity());
             });
-
         }
 
         // add additional containers to existing VMs
@@ -133,7 +132,7 @@ public class FirstFitOptimizer implements Optimizer {
 //            var remainingAdditionalContainers = new ArrayList<ContainerType>();
 //
 //            for (var container : additionalNeededContainerInstances) {
-////                if (!placedServices.isEmpty()) { TODO (one-for-each)??
+////                if (!placedServices.isEmpty()) { // this would be one-for-each
 ////                    remainingAdditionalContainers.add(container);
 ////                    continue;
 ////                }
@@ -166,12 +165,12 @@ public class FirstFitOptimizer implements Optimizer {
                 .sorted(Comparator.comparingDouble(vm -> vm.getType().getCost()))
                 .collect(Collectors.toList());
 
-        // allocate additional containers on cheapest VMs first (one-for-each)
+        // allocate additional containers on cheapest VMs first
         for (var vm : unleasedVmsCheapestFirst) {
             var remainingAdditionalContainers = new ArrayList<ContainerType>();
             var containers = new ArrayList<ContainerType>();
             for (var container : additionalNeededContainerInstances) {
-//                if (!placedServices.isEmpty()) { TODO (one-for-each)??
+//                if (!placedServices.isEmpty()) { // this would be one-for-each
 //                    remainingAdditionalContainers.add(container);
 //                    continue;
 //                }

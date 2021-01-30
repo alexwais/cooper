@@ -1,6 +1,7 @@
 package at.ac.tuwien.dsg.cooper.genetic;
 
 import at.ac.tuwien.dsg.cooper.api.Optimizer;
+import at.ac.tuwien.dsg.cooper.config.OptimizationConfig;
 import at.ac.tuwien.dsg.cooper.domain.ContainerType;
 import at.ac.tuwien.dsg.cooper.domain.Service;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
@@ -24,6 +25,7 @@ import org.springframework.util.StopWatch;
 public class GeneticAlgorithmOptimizer implements Optimizer {
 
     private final Model model;
+    private final OptimizationConfig config;
     //    private final State state;
 //    private final Mapping mapping;
     private final Validator validator;
@@ -33,8 +35,9 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
 //    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
 
 
-    public GeneticAlgorithmOptimizer(Model model, Validator validator) {
+    public GeneticAlgorithmOptimizer(Model model, OptimizationConfig config, Validator validator) {
         this.model = model;
+        this.config = config;
 
 //        this.mapping = new Mapping(model, state);
 //        this.initialPopulation = initialPopulation.stream()
@@ -56,23 +59,20 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
         stopWatch.start();
 
         var codec = new AllocationCodec(model, systemMeasures);
-//        var serviceRowCodec = Codec.of(mapping::serviceRowGenotypeFactory, mapping::serviceRowSquareDecoder);
 
-//        var retryConstraint = new RetryConstraint<DistributedIntegerGene, Float>(
-//                p -> validator.calcOverallocatedVmViolations(new Allocation(model, serviceRowCodec.decode(p.genotype())), previousAllocation) == 0,
-//                mapping.serviceRowGenotypeFactory(),
-//                3
-//        );
         var repairingConstraint = new RepairingConstraint(model, systemMeasures, validator, codec, previousAllocation);
-
-        // TODO test retry vs. repair
-//        var constraint = repairConstraint;
 
         var fitnessFunction = new Function<Map<VmInstance, List<ContainerType>>, Float>() {
             @Override
             public Float apply(Map<VmInstance, List<ContainerType>> allocationMap) {
                 var f = new FitnessFunction(model, validator);
-                return f.eval(new Allocation(model, allocationMap), previousAllocation, systemMeasures, imageCacheState);
+                return f.eval(
+                        new Allocation(model, allocationMap),
+                        previousAllocation,
+                        systemMeasures,
+                        imageCacheState,
+                        config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.GA_C
+                );
             }
         };
 
@@ -80,9 +80,9 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
                 .builder(fitnessFunction, codec)
                 .minimizing()
                 .constraint(repairingConstraint)
-                .populationSize(100)
+                .populationSize(25)
                 .survivorsFraction(0.5)
-                .maximalPhenotypeAge(100)
+                .maximalPhenotypeAge(60)
                 .survivorsSelector(
                         new EliteSelector<>(1,
                                 new TournamentSelector<DistributedIntegerGene, Float>(3)
@@ -101,7 +101,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
                 // at least 250 generations AND a valid result must be found
 //                .limit(new ValidatedGenerationLimit(250, mapping, allocationMap ->
 //                        validator.isAllocationValid(new Allocation(model, allocationMap), previousAllocation, systemMeasures.getTotalServiceLoad())))
-                .limit(250)
+                .limit(120)
 //                .peek(c -> log.info("generation {}", c.generation()))
                 .collect(EvolutionResult.toBestPhenotype());
 
@@ -110,83 +110,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
         var decodedAllocationMapping = codec.decode(bestPhenotype.genotype());
 
         stopWatch.stop();
-        return new OptResult(model, systemMeasures, decodedAllocationMapping, bestPhenotype.fitness(), stopWatch.getTotalTimeMillis());
+        return new OptResult(model, systemMeasures, decodedAllocationMapping, stopWatch.getTotalTimeMillis());
     }
-
-
-//    final class ValidatedGenerationLimit implements Predicate<EvolutionResult<DistributedIntegerGene, Float>>  {
-//        private final long generations;
-//        private final Function<Map<VmInstance, List<ContainerType>>, Boolean> validator;
-//        private final Mapping mapping;
-//
-//        ValidatedGenerationLimit(final long generations, final Mapping mapping, final Function<Map<VmInstance, List<ContainerType>>, Boolean> validator) {
-//            this.generations = generations;
-//            this.mapping = mapping;
-//            this.validator = validator;
-//        }
-//
-//        private final AtomicLong _current = new AtomicLong();
-//        private boolean extraRound = false;
-//
-//        @Override
-//        public boolean test(final EvolutionResult<DistributedIntegerGene, Float> evolutionResult) {
-//            var bestPhenotype = evolutionResult.bestPhenotype();
-//            var decodedAllocationMapping = mapping.serviceRowSquareDecoder(bestPhenotype.genotype());
-//
-//            var minimumGenerationNotReached = _current.incrementAndGet() <= generations;
-//            if (minimumGenerationNotReached) {
-//                return true;
-//            }
-//
-//            var invalidResult = !validator.apply(decodedAllocationMapping);
-//            if (invalidResult) {
-//                log.warn("No valid result after {} generations! Continuing...", _current.get());
-//                extraRound = true;
-//                return true;
-//            } else {
-//                // we need to add an extra generation after a valid phenotype has been found,
-//                // otherwise the result won't make it collect() step of the stream...
-//                if (extraRound) {
-//                    extraRound = false;
-//                    return true;
-//                } else {
-//                    return false;
-//                }
-//            }
-//        }
-//
-//    }
-
-
-//    public OptimizationResult run() {
-//        Engine<BitGene, Float> engine1 = Engine
-//                .builder(g -> fitnessFunction.eval(g, state), containerRowCodec)
-//                .minimizing()
-//                .populationSize(500)
-//                .offspringFraction(0.5)
-//                .selector(
-//                        new EliteSelector<>(1,
-//                                new TournamentSelector<BitGene, Float>(3)
-//                        )
-//                )
-//                .offspringSelector(
-//                        new RouletteWheelSelector<>()
-//                )
-//                .alterers(
-//                        new UniformCrossover<>(0.2, 0.2),
-//                        new Mutator<>(0.01),
-//                        new SwapMutator<>(0.05)
-//                )
-//                .maximalPhenotypeAge(100)
-//                .build();
-//
-//        var phenotype = engine1.stream()
-//                .limit(500)
-//                .collect(EvolutionResult.toBestPhenotype());
-//
-//        log.info("Result fitness: {}", phenotype.fitness());
-//
-//        return new OptimizationResult(model, containerRowCodec.decode(phenotype.genotype()));
-//    }
 
 }

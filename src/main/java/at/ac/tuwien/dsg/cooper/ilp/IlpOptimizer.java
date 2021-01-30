@@ -35,7 +35,6 @@ public class IlpOptimizer implements Optimizer {
 //        params.setParam(IloCplex.DoubleParam.TimeLimit, 20);
 //        params.setParam(IloCplex.IntParam.RootAlgorithm, IloCplex.Algorithm.Primal);
 
-
         var stopWatch = new StopWatch();
         stopWatch.start();
 

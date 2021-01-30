@@ -2,7 +2,7 @@ cooper:
   scenario-multiplicator: 1.5
 
 dataCenters:
-  DC-private:
+  DC-Private:
     onPremise: true
     instanceTypes:
       - label: 4.large
@@ -14,19 +14,19 @@ dataCenters:
       - label: 2.small
         cpuCores: 2
         memory: 2GB
-        cost: 0.027
+        cost: 0.033
       - label: 2.medium
         cpuCores: 2
         memory: 4GB
-        cost: 0.052
+        cost: 0.056
       - label: 4.large
         cpuCores: 4
         memory: 8GB
-        cost: 0.1
+        cost: 0.099
       - label: 4.xlarge
         cpuCores: 4
         memory: 16GB
-        cost: 0.19
+        cost: 0.182
   DC-2:
     instanceTypes:
       - label: 2.small
@@ -47,23 +47,23 @@ dataCenters:
         cost: 0.19
 
 distance:
-  - a: DC-private
-    b: DC-private
-    latency: 20
+  - a: DC-Private
+    b: DC-Private
+    latency: 10
   - a: DC-1
     b: DC-1
-    latency: 30
+    latency: 15
   - a: DC-2
     b: DC-2
-    latency: 30
+    latency: 15
   - a: DC-1
     b: DC-2
-    latency: 100
+    latency: 80
   - a: DC-1
-    b: DC-private
-    latency: 120
+    b: DC-Private
+    latency: 80
   - a: DC-2
-    b: DC-private
+    b: DC-Private
     latency: 120
 
 services:

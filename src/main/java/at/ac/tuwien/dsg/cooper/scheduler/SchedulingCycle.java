@@ -140,20 +140,16 @@ public class SchedulingCycle {
     }
 
     private void benchmark(ExecutionPlan executionPlan) {
-        var isEvenMinute = currentClock % 120 == 0;
-        if (isEvenMinute) {
-            var minute = currentClock / 60;
-            var record = new BenchmarkRecord(
-                    (int) minute,
-                    currentState.getImageDownloads(),
-                    currentState.getCurrentSystemMeasures(),
-                    currentState.getCurrentAnalysisResult(),
-                    executionPlan.getOptResult(),
-                    currentState.getLastOptResult(),
-                    currentState.getCurrentTargetAllocation()
-            );
-            benchmarkService.addRecord(record);
-        }
+        var record = new BenchmarkRecord(
+                (int) currentClock,
+                currentState.getImageDownloads(),
+                currentState.getCurrentSystemMeasures(),
+                currentState.getCurrentAnalysisResult(),
+                executionPlan.getOptResult(),
+                currentState.getLastOptResult(),
+                currentState.getCurrentTargetAllocation()
+        );
+        benchmarkService.sample(record);
     }
 
     private void tearDown() {

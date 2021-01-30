@@ -34,7 +34,7 @@ public class IlpProblem {
     private static final double W_A = 0.001;
     private static final double W_Q = 0.000001;
     private static final double W_I = 0.0001;
-    private static final double G = 0.000001; // with higher G sometimes g(k) is wrong??
+    private static final double G = 0.0000000000001; // with higher G sometimes g(k) is wrong??
     private static final int M = 1_000;
 
 
@@ -47,7 +47,7 @@ public class IlpProblem {
 
         try {
             this.cplex = new IloCplex();
-            variables = new Variables(model, cplex, config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C);
+            variables = new Variables(model, cplex, config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP);
             buildObjectiveFunction();
             buildConstraints();
         } catch (IloException e) {
@@ -162,7 +162,7 @@ public class IlpProblem {
                 cplex.prod(objectiveTerm4, W_Q),
                 cplex.prod(objectiveTerm5, W_I)
         );
-        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C) {
+        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP) {
             objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, W_A));
         }
 
@@ -385,7 +385,7 @@ public class IlpProblem {
 
 
         // Constraint 4.17
-        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP_C) {
+        if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP) {
             for (var wrapper : variables.getConcurrentAllocationVariables()) {
                 var decisionVariable1 = variables.getDecisionVariable(wrapper.getC1(), wrapper.getK1());
                 var decisionVariable2 = variables.getDecisionVariable(wrapper.getC2(), wrapper.getK2());

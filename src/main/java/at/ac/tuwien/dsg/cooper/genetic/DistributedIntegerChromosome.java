@@ -108,7 +108,7 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 	private static EnumeratedIntegerDistribution computeContainerDistribution(Service service, Model model, SystemMeasures systemMeasures) {
 		var containersOfService = service.getContainerTypes();
 		var containerCount = containersOfService.size();
-		var serviceShare = shareOfServiceLoadToOverallCapacity(service, model, systemMeasures); // * LOAD_SHARE_BUFFER; // TODO buffer not used
+		var serviceShare = shareOfServiceLoadToOverallCapacity(service, model, systemMeasures);
 		var containerShare = serviceShare / containerCount;
 
 		// 1-based container index to probability
@@ -131,10 +131,9 @@ public class DistributedIntegerChromosome implements NumericChromosome<Integer, 
 		var containerTypeCount = service.getContainerTypes().size();
 		var overallCapacityForService = service.getContainerTypes().stream()
 				// one container type per service can be allocated once on a VM
-				// TODO test with/without containerTypeCount
 				.map(t -> t.getRpmCapacity() * model.getVms().size() / containerTypeCount)
 				.reduce(0L, Long::sum);
-		var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService; // TODO weighted by container type capacity?
+		var loadToCapacityRatio = (double) overallServiceLoad / (double) overallCapacityForService;
 
 		return loadToCapacityRatio;
 	}

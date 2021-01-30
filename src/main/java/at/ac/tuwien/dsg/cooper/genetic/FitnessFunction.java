@@ -1,5 +1,6 @@
 package at.ac.tuwien.dsg.cooper.genetic;
 
+import at.ac.tuwien.dsg.cooper.benchmark.InteractionSimulation;
 import at.ac.tuwien.dsg.cooper.domain.Service;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
@@ -18,12 +19,12 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
-    // TODO /1000, finalize doc
-    private static final int W_COST = 1000;
-    private static final int W_GRACE_PERIOD_WASTE = 500;
-    private static final float W_DISTANCE = 0.1f;
-    private static final float W_OVER_PROVISIONING = 0.1f;
-    private static final float W_CONTAINER_IMAGE_CACHING = 0.1f;
+    // TODO finalize doc
+    private static final float W_COST = 1;
+    private static final float W_GRACE_PERIOD_WASTE = 0.4f;
+    private static final float W_LATENCY = 0.01f;
+    private static final float W_OVER_PROVISIONING = 0.0001f;
+    private static final float W_CONTAINER_IMAGE_CACHING = 0.0001f;
     private static final float W_CONSTRAINT_VIOLATIONS = 10_000_000f;
 
 
@@ -35,17 +36,16 @@ public class FitnessFunction {
      * @return
      */
     public float evalNeutral(Allocation resourceAllocation, SystemMeasures measures) {
-        return eval(resourceAllocation, null, measures, null);
+        return eval(resourceAllocation, null, measures, null, false);
     }
 
-    public float eval(Allocation resourceAllocation, Allocation previousAllocation, SystemMeasures measures, Map<VmInstance, Set<Service>> imageCacheState) {
-//        var simulation = new InteractionSimulation(model, resourceAllocation, measures);
-//        try {
-//            simulation.simulate();
-//        } catch (Exception e) {
-//
-//        }
+    public float eval(Allocation resourceAllocation,
+                      Allocation previousAllocation,
+                      SystemMeasures measures,
+                      Map<VmInstance, Set<Service>> imageCacheState,
+                      boolean skipColocation) {
 
+        var enableColocation = !skipColocation;
 
         // Term 1 - Minimize Cost
         var totalCost = resourceAllocation.getTotalCost();
@@ -58,25 +58,40 @@ public class FitnessFunction {
                 .reduce(0f, Float::sum);
 
         // Term 3 - Exploiting Co-Location
-        // TODO calculation style - differs from ILP objective function...?
-        var distanceBonus = 0f;
-        for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
-            for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
-                var vmA = allocationInstanceA.getVm();
-                var vmB = allocationInstanceB.getVm();
-                var containerA = allocationInstanceA.getContainer();
-                var containerB = allocationInstanceB.getContainer();
+        Float latency = null;
+        Float latencyTotal = null;
+        if (enableColocation) {
+            try {
+                var simulation = new InteractionSimulation(model, resourceAllocation, measures);
+                simulation.simulate();
+                latency = simulation.getInteractionRecorder().getAverageLatency().floatValue();
+                latencyTotal = simulation.getInteractionRecorder().getTotalLatency().floatValue();
+            } catch (IllegalStateException ex) {
+                latency = W_CONSTRAINT_VIOLATIONS;
+                latencyTotal = W_CONSTRAINT_VIOLATIONS * W_CONSTRAINT_VIOLATIONS;
+            }
+        }
 
-                var distance = model.getDistanceBetween(vmA, vmB);
-                var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
+
+        // calculation style differs from ILP objective function...?
+//        var distanceBonus = 0f;
+//        for (Allocation.AllocationTuple allocationInstanceA : resourceAllocation.getAllocatedTuples()) {
+//            for (Allocation.AllocationTuple allocationInstanceB : resourceAllocation.getAllocatedTuples()) {
+//                var vmA = allocationInstanceA.getVm();
+//                var vmB = allocationInstanceB.getVm();
+//                var containerA = allocationInstanceA.getContainer();
+//                var containerB = allocationInstanceB.getContainer();
+//
+//                var distance = model.getDistanceBetween(vmA, vmB);
+//                var affinity = measures.getAffinityBetween(containerA.getService(), containerB.getService());
 //                if (distance > 0) {
-                    distanceBonus -= (affinity / distance);
+//                    distanceBonus -= (affinity / distance);
 //                } else {
 //                    // prevent division by zero
 //                    distanceBonus -= affinity;
 //                }
-            }
-        }
+//            }
+//        }
 
         // Term 4 - Minimize Over-Provisioning
         long overProvisionedCapacity = 0L;
@@ -114,14 +129,19 @@ public class FitnessFunction {
 
         var term1_cost = totalCost * W_COST;
         var term2_gracePeriodCost = gracePeriodCost * W_GRACE_PERIOD_WASTE;
-        var term3_distance = distanceBonus * W_DISTANCE;
+//        var term3_colocation = distanceBonus * 0.5f;
         var term4_overProvisioning = overProvisionedCapacity * W_OVER_PROVISIONING;
         var term5_uncachedContainerImages = uncachedContainers * W_CONTAINER_IMAGE_CACHING;
-
         var term6_constraintViolations = violations * W_CONSTRAINT_VIOLATIONS;
 
-        var fitness = term1_cost + term2_gracePeriodCost + term3_distance + term4_overProvisioning + term5_uncachedContainerImages
+        var fitness = term1_cost + term2_gracePeriodCost + term4_overProvisioning + term5_uncachedContainerImages
                 + term6_constraintViolations;
+
+        if (enableColocation) {
+            var term3_colocation = (latency * (totalCost + 0.1f) * W_LATENCY);
+//            var term3_colocation = (latencyTotal * 0.0000001);
+            fitness += term3_colocation;
+        }
 
         return fitness;
     }

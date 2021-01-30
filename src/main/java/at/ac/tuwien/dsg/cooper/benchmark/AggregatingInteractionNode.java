@@ -86,7 +86,7 @@ public class AggregatingInteractionNode extends InteractionNode {
                     }
                 }
 
-                var loadResult = targetNode.process(remainingLoad); // TODO distribute load among nodes by capacity instead of first-fit?
+                var loadResult = targetNode.process(remainingLoad); // distribute load among nodes by capacity instead of first-fit?
                 var processed = loadResult.getProcessedLoad();
                 remainingLoad.deduct(processed);
                 processedLoad.add(processed);

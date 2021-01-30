@@ -1,0 +1,668 @@
+cooper:
+  scenario-multiplicator: 15
+
+dataCenters:
+  DC-Private:
+    onPremise: true
+    instanceTypes:
+      - label: 4.large
+        cpuCores: 4
+        memory: 8GB
+        count: 2
+  DC-1:
+    instanceTypes:
+      - label: 2.small
+        cpuCores: 2
+        memory: 2GB
+        cost: 0.033
+      - label: 2.medium
+        cpuCores: 2
+        memory: 4GB
+        cost: 0.056
+      - label: 4.large
+        cpuCores: 4
+        memory: 8GB
+        cost: 0.099
+      - label: 4.xlarge
+        cpuCores: 4
+        memory: 16GB
+        cost: 0.182
+  DC-2:
+    instanceTypes:
+      - label: 2.small
+        cpuCores: 2
+        memory: 2GB
+        cost: 0.027
+      - label: 2.medium
+        cpuCores: 2
+        memory: 4GB
+        cost: 0.052
+      - label: 4.large
+        cpuCores: 4
+        memory: 8GB
+        cost: 0.1
+      - label: 4.xlarge
+        cpuCores: 4
+        memory: 16GB
+        cost: 0.19
+
+distance:
+  - a: DC-Private
+    b: DC-Private
+    latency: 10
+  - a: DC-1
+    b: DC-1
+    latency: 15
+  - a: DC-2
+    b: DC-2
+    latency: 15
+  - a: DC-1
+    b: DC-2
+    latency: 80
+  - a: DC-1
+    b: DC-Private
+    latency: 80
+  - a: DC-2
+    b: DC-Private
+    latency: 120
+
+services:
+  service-gw-0:
+    downstreamServices:
+      service-a-0: 0.5
+      service-b-0: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-0:
+    downstreamServices:
+      service-b-0: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-0:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-1:
+    downstreamServices:
+      service-a-1: 0.5
+      service-b-1: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-1:
+    downstreamServices:
+      service-b-1: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-1:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-2:
+    downstreamServices:
+      service-a-2: 0.5
+      service-b-2: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-2:
+    downstreamServices:
+      service-b-2: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-2:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-3:
+    downstreamServices:
+      service-a-3: 0.5
+      service-b-3: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-3:
+    downstreamServices:
+      service-b-3: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-3:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-4:
+    downstreamServices:
+      service-a-4: 0.5
+      service-b-4: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-4:
+    downstreamServices:
+      service-b-4: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-4:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-5:
+    downstreamServices:
+      service-a-5: 0.5
+      service-b-5: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-5:
+    downstreamServices:
+      service-b-5: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-5:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-6:
+    downstreamServices:
+      service-a-6: 0.5
+      service-b-6: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-6:
+    downstreamServices:
+      service-b-6: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-6:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-7:
+    downstreamServices:
+      service-a-7: 0.5
+      service-b-7: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-7:
+    downstreamServices:
+      service-b-7: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-7:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-8:
+    downstreamServices:
+      service-a-8: 0.5
+      service-b-8: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-8:
+    downstreamServices:
+      service-b-8: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-8:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+
+  service-gw-9:
+    downstreamServices:
+      service-a-9: 0.5
+      service-b-9: 0.1
+    containerConfigurations:
+      - label: 1000@512
+        rpmCapacity: 1000
+        cpuShares: 1024
+        memory: 512MB
+      - label: 2000@1024
+        rpmCapacity: 2000
+        cpuShares: 1536
+        memory: 1024MB
+      - label: 4000@2048
+        rpmCapacity: 4000
+        cpuShares: 2048
+        memory: 2048MB
+      - label: 8000@4096
+        rpmCapacity: 8000
+        cpuShares: 2560
+        memory: 4096MB
+  service-a-9:
+    downstreamServices:
+      service-b-9: 0.5
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB
+  service-b-9:
+    containerConfigurations:
+      - label: 250@1024
+        rpmCapacity: 250
+        cpuShares: 512
+        memory: 1024MB
+      - label: 500@2048
+        rpmCapacity: 500
+        cpuShares: 1024
+        memory: 2048MB
+      - label: 1000@4096
+        rpmCapacity: 1000
+        cpuShares: 1536
+        memory: 4096MB
+      - label: 2000@8192
+        rpmCapacity: 2000
+        cpuShares: 2048
+        memory: 8192MB

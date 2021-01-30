@@ -60,7 +60,7 @@ public class Planner {
         this.validator = validator;
         this.config = config;
         this.fitnessFunction = new FitnessFunction(model, validator);
-        this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, validator);
+        this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, config, validator);
         this.ilpOptimizer = new IlpOptimizer(model, config);
         this.firstFitOptimizer = new FirstFitOptimizer(model);
     }
@@ -152,18 +152,15 @@ public class Planner {
 
         switch (config.getStrategy()) {
             case GA:
+            case GA_C:
                 optResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
+            case ILP:
             case ILP_C:
-            case ILP_NC:
-                var ilpResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
-                ilpResult.setFitness(fitnessFunction.eval(ilpResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
-                optResult = ilpResult;
+                optResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
             case FF:
-                var firstFitResult = firstFitOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
-                firstFitResult.setFitness(fitnessFunction.eval(firstFitResult.getAllocation(), previousAllocation, measures, state.getImageCacheState()));
-                optResult = firstFitResult;
+                optResult = firstFitOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
         }
 
@@ -171,6 +168,8 @@ public class Planner {
             throw new IllegalStateException("Invalid allocation!");
         }
 
+        var fitness = fitnessFunction.eval(optResult.getAllocation(), previousAllocation, measures, state.getImageCacheState(), false);
+        optResult.setFitness(fitness);
         var neutralFitness = fitnessFunction.evalNeutral(optResult.getAllocation(), measures);
         optResult.setNeutralFitness(neutralFitness);
 

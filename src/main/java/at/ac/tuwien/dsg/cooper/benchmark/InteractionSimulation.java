@@ -58,13 +58,14 @@ public class InteractionSimulation {
         var processedSum = processedLoad.values().stream().mapToDouble(v -> v).sum();
         var totalProcessedSum = rootNode.totalProcessedLoad.values().stream().mapToDouble(v -> v).sum();
         var remainderSum = remainingOverflow.values().stream().mapToDouble(v -> v).sum();
-        log.info("Processed external load: {} | Processed total load: {} | Remaining overflow: {}", processedSum, totalProcessedSum, remainingOverflow);
+        var diff = measures.getTotalSystemLoad() - totalProcessedSum;
+
+//        log.info("Processed external load: {} | Processed total load: {} | Diff: {} | Remaining overflow: {}", processedSum, totalProcessedSum, diff, remainingOverflow);
 
         if (remainderSum > 0.1) {
             throw new IllegalStateException("Remainder!");
         }
-        var diff = measures.getTotalSystemLoad() - totalProcessedSum;
-        if (Math.abs(diff) > 0.1) {
+        if (Math.abs(diff) > 10) {
             throw new IllegalStateException("Total load discrepancy!");
         }
     }
@@ -131,7 +132,7 @@ public class InteractionSimulation {
         for (var sourceNode : containerNodes) {
             for (var targetNode : containerNodes) {
                 var toMap = distanceGraph.getOrDefault(sourceNode, new HashMap<>());
-                toMap.put(targetNode, 1);
+                toMap.put(targetNode, 1); // TODO zero distance on same VM?
                 distanceGraph.put(sourceNode, toMap);
             }
         }

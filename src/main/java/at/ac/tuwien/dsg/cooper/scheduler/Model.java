@@ -48,7 +48,7 @@ public class Model {
     }
 
     public double getDistanceBetween(VmInstance vmA, VmInstance vmB) {
-        if (vmA == vmB) return 1; // TODO 0 vs. 1?
+        if (vmA == vmB) return 0;
         return getDistanceBetween(vmA.getDataCenter(), vmB.getDataCenter());
     }
 

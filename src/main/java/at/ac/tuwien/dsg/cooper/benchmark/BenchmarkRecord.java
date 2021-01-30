@@ -13,22 +13,35 @@ import lombok.Setter;
 
 
 @RequiredArgsConstructor
-@JsonPropertyOrder({"t", "cost", "avgLatency", "opt", "imageDownloads", "fitness", "neutralFitness", "runtime"})
+@JsonPropertyOrder({"t", "cost", "avgLatency", "interactionCalls", "opt", "imageDownloads", "fitness", "neutralFitness",  "vmCount",  "peakContainerCount", "runtime"})
 public class BenchmarkRecord {
 
     @Getter
-    private final int t;
-
-    public float getCost() {
-        return currentAllocation.getTotalCost();
-    }
+    @JsonIgnore
+    private final int seconds;
 
     @Getter
     @Setter
     private Double avgLatency = null;
 
     @Getter
+    @Setter
+    private Float cost = 0f; // accumulated
+
+    @Getter
+    @Setter
+    private Integer interactionCalls = null;
+
+    @Getter
+    @Setter
+    private Integer peakContainerCount = null;
+
+    @Getter
     private final Long imageDownloads;
+
+    public int getT() { // in minutes
+        return seconds / 60;
+    }
 
     public boolean getOpt() {
         return currentOptResult != null;
@@ -40,6 +53,10 @@ public class BenchmarkRecord {
 
     public Float getNeutralFitness() {
         return currentOptResult == null ? null : currentOptResult.getNeutralFitness();
+    }
+
+    public Integer getVmCount() {
+        return currentAllocation.getRunningVms().size();
     }
 
     public Integer getRuntime() {

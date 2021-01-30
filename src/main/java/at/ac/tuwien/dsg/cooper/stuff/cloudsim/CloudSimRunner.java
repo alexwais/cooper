@@ -68,7 +68,7 @@ public class CloudSimRunner implements Cloud {
 
         // Creates a Datacenter with a list of Hosts.
         // Uses a VmAllocationPolicySimple by default to allocate VMs
-        // FIXME dynamic datacenters?
+        // dynamic datacenters?
         datacenters.put("DC-1", createDatacenter(1024, 1024));
         datacenters.put("DC-2", createDatacenter(1024, 1024));
 
@@ -151,7 +151,7 @@ public class CloudSimRunner implements Cloud {
     }
 
     private Vm launchVm(String type, String datacenter) {
-        // FIXME dynamic vm types?
+        // dynamic vm types?
         var vmType = vmTypeConfiguration.getVmTypes().get(type);
         var vm = new VmSimple(1024, vmType.getCpu());
         vm.setRam(vmType.getRam()).setBw(1000).setSize(1000);
@@ -175,7 +175,7 @@ public class CloudSimRunner implements Cloud {
         @Override
         public void terminateVm(long id) {
             var vm = vmList.get(id);
-            // TODO kill cloudlets properly -> cancel status...
+            // kill cloudlets properly to cancel statu?
 //            vm.getCloudletScheduler().getCloudletList()
 //                    .forEach(c -> vm.getCloudletScheduler().cloudletCancel(c));
 
@@ -192,7 +192,7 @@ public class CloudSimRunner implements Cloud {
             var vm = vmList.get(vmId);
             if (vm == null) throw new IllegalArgumentException("Vm with id=" + vmId + "does not exist!");
 
-            // TODO validate available resources!
+            // validate available resources!?
             var cloudlet = new CloudletSimple(100000000, cpuCores);
             cloudlet.setUtilizationModelCpu(new UtilizationModelDynamic(UtilizationModel.Unit.ABSOLUTE, 1024));
             cloudlet.setUtilizationModelRam(new UtilizationModelDynamic(UtilizationModel.Unit.ABSOLUTE, memory));

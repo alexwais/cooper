@@ -31,9 +31,4 @@ public class OptResult {
         this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
-    public OptResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Float fitness, Long runtimeInMilliseconds) {
-        this(model, underlyingMeasures, allocationMapping, runtimeInMilliseconds);
-        this.fitness = fitness;
-    }
-
 }

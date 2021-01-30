@@ -14,11 +14,15 @@ public class InteractionRecorder {
     }
 
     public Double getAverageLatency() {
-        var latencySum =  recordedInteractionByLatency.entrySet().stream()
-                .map(e -> e.getKey() * e.getValue())
-                .mapToDouble(v ->v).sum();
+        var totalLatency = getTotalLatency();
         var totalCalls = getTotalCalls();
-        return latencySum / totalCalls;
+        return totalLatency / totalCalls;
+    }
+
+    public Double getTotalLatency() {
+        return recordedInteractionByLatency.entrySet().stream()
+                .map(e -> e.getKey() * e.getValue())
+                .mapToDouble(v -> v).sum();
     }
 
     public Double getTotalCalls() {

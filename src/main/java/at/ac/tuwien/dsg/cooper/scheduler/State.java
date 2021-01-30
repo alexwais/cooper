@@ -39,7 +39,7 @@ public class State {
     private ProviderState providerState = new ProviderState();
 
     @Getter
-    private Map<VmInstance, Set<Service>> imageCacheState = new HashMap<>(); // TODO use set everywhere applicable
+    private Map<VmInstance, Set<Service>> imageCacheState = new HashMap<>(); // TODO use set everywhere applicable?
 
     @Getter
     private long imageDownloads = 0L;

@@ -104,7 +104,7 @@ public class Variables {
                         for (var c2 : s2.getContainerTypes()) {
                             for (var k1 : model.getVms().values()) {
                                 for (var k2 : model.getVms().values()) {
-                                    if (k1 == k2) continue; // TODO ok to assume distance on same VM is always 0?
+                                    if (k1 == k2) continue; // assume distance on same VM is always 0
 
                                     // skip equivalents
                                     var symmetricIdentifier = concurrentAllocationVariableIdentifier(c2, k2, c1, k1);
