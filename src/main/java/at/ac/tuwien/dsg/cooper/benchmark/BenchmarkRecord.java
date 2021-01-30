@@ -7,13 +7,14 @@ import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.SystemMeasures;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 
 @RequiredArgsConstructor
-@JsonPropertyOrder({"t", "cost", "avgLatency", "interactionCalls", "opt", "imageDownloads", "fitness", "neutralFitness",  "vmCount",  "peakContainerCount", "runtime"})
+@JsonPropertyOrder({"t", "cost", "accCost", "accLatency", "latency", "interactionCalls", "opt", "imageDownloads", "fitness", "neutralFitness",  "vmCount",  "peakContainerCount", "runtime"})
 public class BenchmarkRecord {
 
     @Getter
@@ -22,11 +23,15 @@ public class BenchmarkRecord {
 
     @Getter
     @Setter
-    private Double avgLatency = null;
+    private Double latency = null;
 
     @Getter
     @Setter
-    private Float cost = 0f; // accumulated
+    private Float cost = 0f;
+
+    @Getter
+    @Setter
+    private Float accCost = 0f;
 
     @Getter
     @Setter
@@ -59,10 +64,19 @@ public class BenchmarkRecord {
         return currentAllocation.getRunningVms().size();
     }
 
-    public Integer getRuntime() {
-        return currentOptResult == null ? null : currentOptResult.getRuntimeInMilliseconds().intValue();
+    public Float getRuntime() {
+        return currentOptResult == null ? null : currentOptResult.getRuntimeInMilliseconds().floatValue() / 1000f;
     }
 
+    public Float getAccLatency() {
+        var totalLatency = records.stream().map(r -> r.getLatency() * r.getInteractionCalls()).reduce(Double::sum).get().floatValue();
+        var totalCalls = records.stream().map(BenchmarkRecord::getInteractionCalls).reduce(Integer::sum).get();
+        return totalLatency / totalCalls;
+    }
+
+    @JsonIgnore
+    @Setter
+    private List<BenchmarkRecord> records;
 
     @Getter
     @JsonIgnore

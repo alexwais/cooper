@@ -71,7 +71,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
                         previousAllocation,
                         systemMeasures,
                         imageCacheState,
-                        config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.GA_C
+                        config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.GA_NC
                 );
             }
         };

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class BenchmarkService {
 
 
     private float accumulatedCost = 0f;
+    private float currentAccumulatedCost = 0f;
     private BenchmarkRecord currentRecord; // set every 2-minute interval
 
     public void sample(BenchmarkRecord record) {
@@ -40,20 +42,24 @@ public class BenchmarkService {
         var isOddMinute = (seconds + 60) % 120 == 0;
 
         accumulatedCost += record.getCurrentAllocation().getTotalCost() / 120; // hourly basis
+        currentAccumulatedCost += record.getCurrentAllocation().getTotalCost() / 120; // hourly basis
 
         if (isEvenMinute) {
             if (currentRecord != null) {
                 // finalize previous period
-                currentRecord.setCost(accumulatedCost);
+                currentRecord.setCost(currentAccumulatedCost);
+                currentRecord.setAccCost(accumulatedCost);
                 this.records.put(currentRecord.getT(), currentRecord);
+                currentRecord.setRecords(new ArrayList<>(this.records.values()));
                 currentRecord = null;
             }
             // set target for new period
             var simulation = new InteractionSimulation(model, record.getLastOptResult().getAllocation(), record.getMeasures());
             simulation.simulate();
-            record.setAvgLatency(simulation.getInteractionRecorder().getAverageLatency());
+            record.setLatency(simulation.getInteractionRecorder().getAverageLatency());
             record.setInteractionCalls(simulation.getInteractionRecorder().getTotalCalls().intValue());
             currentRecord = record;
+            currentAccumulatedCost = 0f;
         }
         if (isOddMinute) {
             assert currentRecord != null;

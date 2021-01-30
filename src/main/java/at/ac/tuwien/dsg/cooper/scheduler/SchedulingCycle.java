@@ -95,7 +95,7 @@ public class SchedulingCycle {
                 cloudController.abort();
                 tearDown();
                 try {
-                    benchmarkService.print();
+                    benchmarkService.saveToFile();
                 } catch (IOException e2) {
                     e2.printStackTrace();
                 }

@@ -152,11 +152,11 @@ public class Planner {
 
         switch (config.getStrategy()) {
             case GA:
-            case GA_C:
+            case GA_NC:
                 optResult = geneticOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
             case ILP:
-            case ILP_C:
+            case ILP_NC:
                 optResult = ilpOptimizer.optimize(previousAllocation, measures, state.getImageCacheState());
                 break;
             case FF:

@@ -14,9 +14,9 @@ public class OptimizationConfig {
 
     public enum OptimizationAlgorithm {
         GA,
-        GA_C,
+        GA_NC,
         ILP,
-        ILP_C,
+        ILP_NC,
         FF
     }
 
