@@ -29,7 +29,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
     //    private final State state;
 //    private final Mapping mapping;
     private final Validator validator;
-    private final FitnessFunction fitnessFunction;
+    private final FitnessFunction fitnessFunctionInstance;
 
 //     private final RetryConstraint<DistributedIntegerGene, Float> constraint;
 //    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
@@ -45,7 +45,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
 //                .collect(Collectors.toList());
 
         this.validator = validator;
-        this.fitnessFunction = new FitnessFunction(model, validator);
+        this.fitnessFunctionInstance = new FitnessFunction(model, validator, config.getGaLatencyWeight());
 
 //        flatCodec = Codec.of(mapping.flatGenotypeFactory(), mapping::flatDecoder);
 //        containerRowCodec = Codec.of(mapping.containerRowGenotypeFactory(), mapping::containerRowSquareDecoder);
@@ -65,8 +65,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
         var fitnessFunction = new Function<Map<VmInstance, List<ContainerType>>, Float>() {
             @Override
             public Float apply(Map<VmInstance, List<ContainerType>> allocationMap) {
-                var f = new FitnessFunction(model, validator);
-                return f.eval(
+                return fitnessFunctionInstance.eval(
                         new Allocation(model, allocationMap),
                         previousAllocation,
                         systemMeasures,

@@ -74,55 +74,55 @@ services:
     containerConfigurations:
       - label: 1000@512
         rpmCapacity: 1000
-        cpuShares: 1024
+        cpuUnits: 1024
         memory: 512MB
       - label: 2000@1024
         rpmCapacity: 2000
-        cpuShares: 1536
+        cpuUnits: 1536
         memory: 1024MB
       - label: 4000@2048
         rpmCapacity: 4000
-        cpuShares: 2048
+        cpuUnits: 2048
         memory: 2048MB
       - label: 8000@4096
         rpmCapacity: 8000
-        cpuShares: 2560
+        cpuUnits: 2560
         memory: 4096MB
   service-a:
     downstreamServices:
       service-b: 0.5
     containerConfigurations:
-      - label: 250@1024
-        rpmCapacity: 250
-        cpuShares: 512
+      - label: 600@1024
+        rpmCapacity: 600
+        cpuUnits: 512
         memory: 1024MB
-      - label: 500@2048
-        rpmCapacity: 500
-        cpuShares: 1024
+      - label: 900@2048
+        rpmCapacity: 900
+        cpuUnits: 1024
         memory: 2048MB
-      - label: 1000@4096
-        rpmCapacity: 1000
-        cpuShares: 1536
+      - label: 1350@4096
+        rpmCapacity: 1350
+        cpuUnits: 1536
         memory: 4096MB
-      - label: 2000@8192
-        rpmCapacity: 2000
-        cpuShares: 2048
+      - label: 2025@8192
+        rpmCapacity: 2025
+        cpuUnits: 2048
         memory: 8192MB
   service-b:
     containerConfigurations:
-      - label: 250@1024
-        rpmCapacity: 250
-        cpuShares: 512
+      - label: 600@1024
+        rpmCapacity: 600
+        cpuUnits: 512
         memory: 1024MB
-      - label: 500@2048
-        rpmCapacity: 500
-        cpuShares: 1024
+      - label: 900@2048
+        rpmCapacity: 900
+        cpuUnits: 1024
         memory: 2048MB
-      - label: 1000@4096
-        rpmCapacity: 1000
-        cpuShares: 1536
+      - label: 1350@4096
+        rpmCapacity: 1350
+        cpuUnits: 1536
         memory: 4096MB
-      - label: 2000@8192
-        rpmCapacity: 2000
-        cpuShares: 2048
+      - label: 2025@8192
+        rpmCapacity: 2025
+        cpuUnits: 2048
         memory: 8192MB

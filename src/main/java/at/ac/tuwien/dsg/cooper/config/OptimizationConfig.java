@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 public class OptimizationConfig {
 
     private OptimizationAlgorithm strategy;
+    private Float gaLatencyWeight;
 
     public enum OptimizationAlgorithm {
         GA,

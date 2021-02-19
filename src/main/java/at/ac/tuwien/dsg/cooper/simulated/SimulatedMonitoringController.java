@@ -43,6 +43,10 @@ public class SimulatedMonitoringController implements MonitoringController {
             latestRecord = loadFixture.pop();
         }
 
+//        if (elapsedMinutes >= 24) {
+//            throw new EndOfScenarioException();
+//        }
+
         if (elapsedMinutes >= latestRecord.getMinutes() + 2) {
             throw new EndOfScenarioException();
         }

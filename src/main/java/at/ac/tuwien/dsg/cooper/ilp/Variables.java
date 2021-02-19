@@ -128,7 +128,7 @@ public class Variables {
 
         for (var service : model.getServices().values()) {
             var maxCpuRequirementOfServiceContainers = service.getContainerTypes().stream()
-                    .mapToInt(ContainerType::getCpuShares)
+                    .mapToInt(ContainerType::getCpuUnits)
                     .max().getAsInt();
             var maxMemRequirementOfServiceContainers = service.getContainerTypes().stream()
                     .mapToInt(ContainerType::getMemory)

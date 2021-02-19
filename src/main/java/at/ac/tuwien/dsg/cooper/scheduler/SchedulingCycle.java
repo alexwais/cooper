@@ -58,7 +58,7 @@ public class SchedulingCycle {
 
         this.validator = new Validator(model);
 
-        this.analyzer = new Analyzer(model);
+        this.analyzer = new Analyzer(model, config);
         this.planner = new Planner(model, validator, config);
         this.executor = new Executor(model);
     }

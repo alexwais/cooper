@@ -11,7 +11,7 @@ public class ContainerType {
 
     private String label;
 
-    private Integer cpuShares; // TODO rename to cpuUnits?
+    private Integer cpuUnits;
 
     private Integer memory; // MB
 

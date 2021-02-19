@@ -22,7 +22,7 @@ public class FitnessFunction {
     // TODO finalize doc
     private static final float W_COST = 1;
     private static final float W_GRACE_PERIOD_WASTE = 0.4f;
-    private static final float W_LATENCY = 0.01f;
+    private final float wLatency;
     private static final float W_OVER_PROVISIONING = 0.0001f;
     private static final float W_CONTAINER_IMAGE_CACHING = 0.0001f;
     private static final float W_CONSTRAINT_VIOLATIONS = 10_000_000f;
@@ -138,7 +138,7 @@ public class FitnessFunction {
                 + term6_constraintViolations;
 
         if (enableColocation) {
-            var term3_colocation = (latency * (totalCost + 0.1f) * W_LATENCY);
+            var term3_colocation = (latency * wLatency);
 //            var term3_colocation = (latencyTotal * 0.0000001);
             fitness += term3_colocation;
         }

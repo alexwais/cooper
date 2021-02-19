@@ -90,7 +90,7 @@ public class Initializer {
             var service = new Service(key);
 
             for (var c : config.getContainerConfigurations()) {
-                var containerConfiguration = new ContainerType(service.getName() + ":" + c.getLabel(), c.getCpuShares(), (int) c.getMemory().toMegabytes(), c.getRpmCapacity(), service);
+                var containerConfiguration = new ContainerType(service.getName() + ":" + c.getLabel(), c.getCpuUnits(), (int) c.getMemory().toMegabytes(), c.getRpmCapacity(), service);
                 service.getContainerTypes().add(containerConfiguration);
             }
 

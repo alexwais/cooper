@@ -1,0 +1,5 @@
+spring.config.import: scenario-a.yml
+
+cooper:
+  optimization:
+    gaLatencyWeight: 0.01

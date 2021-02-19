@@ -34,7 +34,8 @@ public class IlpProblem {
     private static final double W_A = 0.001;
     private static final double W_Q = 0.000001;
     private static final double W_I = 0.0001;
-    private static final double G = 0.0000000000001; // with higher G sometimes g(k) is wrong??
+    private static final double G = 0.000000001; // with higher G sometimes g(k) is wrong?? TODO document
+    // 0.000000001 works with ILP-NC  b@1x, a@1x, a@10x, a@100x
     private static final int M = 1_000;
 
 
@@ -253,7 +254,7 @@ public class IlpProblem {
                 var rightSide = cplex.linearNumExpr();
                 for (var cs : s.getContainerTypes()) {
                     var decisionVariable = variables.getDecisionVariable(cs, k);
-                    var cpuUsage = cs.getCpuShares(); // U_{c_s}^{CPU}
+                    var cpuUsage = cs.getCpuUnits(); // U_{c_s}^{CPU}
                     rightSide.addTerm(decisionVariable, cpuUsage);
                 }
 
@@ -271,7 +272,7 @@ public class IlpProblem {
                 var rightSideSum = 0;
                 for (var cs : s.getContainerTypes()) {
                     var isPreviouslyAllocated = previousAllocation.isAllocated(cs, k); // z_{cs,k}
-                    var cpuUsage = cs.getCpuShares(); // U_{c_s}^{CPU}
+                    var cpuUsage = cs.getCpuUnits(); // U_{c_s}^{CPU}
                     if (isPreviouslyAllocated) {
                         rightSideSum += cpuUsage;
                     }

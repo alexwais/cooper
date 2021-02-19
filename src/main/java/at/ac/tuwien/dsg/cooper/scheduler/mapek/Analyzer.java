@@ -1,5 +1,6 @@
 package at.ac.tuwien.dsg.cooper.scheduler.mapek;
 
+import at.ac.tuwien.dsg.cooper.config.OptimizationConfig;
 import at.ac.tuwien.dsg.cooper.genetic.FitnessFunction;
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
 import at.ac.tuwien.dsg.cooper.scheduler.State;
@@ -22,10 +23,10 @@ public class Analyzer {
     private final Validator validator;
     private final FitnessFunction fitnessFunction;
 
-    public Analyzer(Model model) {
+    public Analyzer(Model model, OptimizationConfig config) {
         this.model = model;
         this.validator = new Validator(model);
-        this.fitnessFunction = new FitnessFunction(model, validator);
+        this.fitnessFunction = new FitnessFunction(model, validator, config.getGaLatencyWeight());
     }
 
     public AnalysisResult analyze(State state) {

@@ -8,7 +8,7 @@ public class ContainerConfigurationConfig {
 
     private String label;
 
-    private Integer cpuShares;
+    private Integer cpuUnits;
 
     private DataSize memory; // MB
 

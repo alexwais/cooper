@@ -173,7 +173,7 @@ public class SimpleReparation {
 
             var containersToTest = new ArrayList<>(allocatedContainers);
             containersToTest.add(c);
-            var containerFits = !validator.isVmOverallocated(vm, containersToTest, previousContainers); // TODO track remaining resources separatly
+            var containerFits = !validator.isVmOverallocated(vm, containersToTest, previousContainers);
             if (containerFits) {
                 allocatedContainers.add(c);
                 presentServices.add(c.getService());

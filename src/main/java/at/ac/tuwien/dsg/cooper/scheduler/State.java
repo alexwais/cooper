@@ -39,7 +39,7 @@ public class State {
     private ProviderState providerState = new ProviderState();
 
     @Getter
-    private Map<VmInstance, Set<Service>> imageCacheState = new HashMap<>(); // TODO use set everywhere applicable?
+    private Map<VmInstance, Set<Service>> imageCacheState = new HashMap<>();
 
     @Getter
     private long imageDownloads = 0L;
@@ -53,7 +53,7 @@ public class State {
         var allocatedContainers = providerState.getRunningContainersByVm(vm);
 
         var allocatedCpuCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
-                .map(a -> a.getContainer().getCpuShares())
+                .map(a -> a.getContainer().getCpuUnits())
                 .reduce(0, Integer::sum);
         var allocatedMemoryCapacity = allocatedContainers == null ? 0 : allocatedContainers.stream()
                 .map(a -> a.getContainer().getMemory())

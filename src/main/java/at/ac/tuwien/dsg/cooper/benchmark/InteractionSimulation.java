@@ -132,7 +132,7 @@ public class InteractionSimulation {
         for (var sourceNode : containerNodes) {
             for (var targetNode : containerNodes) {
                 var toMap = distanceGraph.getOrDefault(sourceNode, new HashMap<>());
-                toMap.put(targetNode, 1); // TODO zero distance on same VM?
+                toMap.put(targetNode, 0); // TODO zero distance on same VM?
                 distanceGraph.put(sourceNode, toMap);
             }
         }

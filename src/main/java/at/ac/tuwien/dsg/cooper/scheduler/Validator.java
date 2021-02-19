@@ -64,12 +64,12 @@ public class Validator {
         var memoryCapacity = vm.getType().getMemory();
 
         var allocatedCpuPerService = containers.stream()
-                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuUnits));
         var allocatedMemoryPerService = containers.stream()
                 .collect(Collectors.toMap(ContainerType::getService, ContainerType::getMemory));
 
         var abandonedCpuPerService = previousContainers == null ? new HashMap<Service, Integer>() : previousContainers.stream()
-                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuShares));
+                .collect(Collectors.toMap(ContainerType::getService, ContainerType::getCpuUnits));
         var abandonedMemoryPerService = previousContainers == null ? new HashMap<Service, Integer>() : previousContainers.stream()
                 .collect(Collectors.toMap(ContainerType::getService, ContainerType::getMemory));
 

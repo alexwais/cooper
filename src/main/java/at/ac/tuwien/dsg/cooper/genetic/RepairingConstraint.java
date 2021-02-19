@@ -31,7 +31,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
     private static final double REPAIRING_PROBABILITY = 0.2;
 
     private SimpleReparation simpleReparation;
-    private RepairingOptimizer repairingOptimizer;
+    private Model.FirstFitOptimizer firstFitOptimizer;
 
 
     public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final AllocationCodec mapping, final Allocation previousAllocation) {
@@ -42,7 +42,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         this.previousAllocation = previousAllocation;
 
         this.simpleReparation = new SimpleReparation(model, measures, validator, previousAllocation);
-        this.repairingOptimizer = new RepairingOptimizer(model);
+        this.firstFitOptimizer = new Model.FirstFitOptimizer(model);
     }
 
 
@@ -56,7 +56,6 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
 
         // only consider overallocation...
         var valid = validator.calcOverallocatedVmViolations(allocationToTest, previousAllocation) == 0;
-        // var valid = validator.isAllocationValid(allocationToTest, previousAllocation, measures.getTotalServiceLoad());
         return valid;
     }
 
@@ -66,7 +65,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         Map<VmInstance, List<ContainerType>> repairedAllocation;
 
         if (random < CONSIDER_PREV_ALLOCATION_PROBABILITY) {
-            var result = repairingOptimizer.optimize(previousAllocation, measures, Collections.emptyMap());
+            var result = firstFitOptimizer.optimize(previousAllocation, measures, Collections.emptyMap());
             repairedAllocation = result.getAllocation().getAllocationMap();
         } else {
             var genotype = individual.genotype();

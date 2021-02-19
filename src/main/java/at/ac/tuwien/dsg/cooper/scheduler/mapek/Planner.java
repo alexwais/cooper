@@ -7,7 +7,10 @@ import at.ac.tuwien.dsg.cooper.domain.VmInstance;
 import at.ac.tuwien.dsg.cooper.genetic.FitnessFunction;
 import at.ac.tuwien.dsg.cooper.genetic.GeneticAlgorithmOptimizer;
 import at.ac.tuwien.dsg.cooper.ilp.IlpOptimizer;
-import at.ac.tuwien.dsg.cooper.scheduler.*;
+import at.ac.tuwien.dsg.cooper.scheduler.MapUtils;
+import at.ac.tuwien.dsg.cooper.scheduler.Model;
+import at.ac.tuwien.dsg.cooper.scheduler.State;
+import at.ac.tuwien.dsg.cooper.scheduler.Validator;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.ExecutionPlan;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
@@ -59,10 +62,10 @@ public class Planner {
         this.model = model;
         this.validator = validator;
         this.config = config;
-        this.fitnessFunction = new FitnessFunction(model, validator);
+        this.fitnessFunction = new FitnessFunction(model, validator, config.getGaLatencyWeight());
         this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, config, validator);
         this.ilpOptimizer = new IlpOptimizer(model, config);
-        this.firstFitOptimizer = new FirstFitOptimizer(model);
+        this.firstFitOptimizer = new Model.FirstFitOptimizer(model);
     }
 
     private ReallocationPlan currentReallocation = null;
