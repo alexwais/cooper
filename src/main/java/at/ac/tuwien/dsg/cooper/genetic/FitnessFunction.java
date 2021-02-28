@@ -25,7 +25,7 @@ public class FitnessFunction {
     private final float wLatency;
     private static final float W_OVER_PROVISIONING = 0.0001f;
     private static final float W_CONTAINER_IMAGE_CACHING = 0.0001f;
-    private static final float W_CONSTRAINT_VIOLATIONS = 10_000_000f;
+    private static final float W_CONSTRAINT_VIOLATIONS = 1_000f; // prev. 10_000_000f;
 
 
     /**
@@ -59,16 +59,13 @@ public class FitnessFunction {
 
         // Term 3 - Exploiting Co-Location
         Float latency = null;
-        Float latencyTotal = null;
         if (enableColocation) {
             try {
                 var simulation = new InteractionSimulation(model, resourceAllocation, measures);
                 simulation.simulate();
                 latency = simulation.getInteractionRecorder().getAverageLatency().floatValue();
-                latencyTotal = simulation.getInteractionRecorder().getTotalLatency().floatValue();
             } catch (IllegalStateException ex) {
                 latency = W_CONSTRAINT_VIOLATIONS;
-                latencyTotal = W_CONSTRAINT_VIOLATIONS * W_CONSTRAINT_VIOLATIONS;
             }
         }
 
@@ -92,6 +89,8 @@ public class FitnessFunction {
 //                }
 //            }
 //        }
+//        var internalLoad = measures.getInternalServiceLoad().values().stream().reduce(Integer::sum).get();
+//        distanceBonus = distanceBonus / internalLoad;
 
         // Term 4 - Minimize Over-Provisioning
         long overProvisionedCapacity = 0L;
@@ -139,7 +138,7 @@ public class FitnessFunction {
 
         if (enableColocation) {
             var term3_colocation = (latency * wLatency);
-//            var term3_colocation = (latencyTotal * 0.0000001);
+//            var term3_colocation = (distanceBonus * wLatency);
             fitness += term3_colocation;
         }
 

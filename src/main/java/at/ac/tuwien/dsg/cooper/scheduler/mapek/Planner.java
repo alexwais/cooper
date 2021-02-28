@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.util.StopWatch;
 
 
 @Slf4j
@@ -147,11 +148,11 @@ public class Planner {
 
     private OptResult optimize(Allocation previousAllocation, State state) {
         var measures = state.getCurrentSystemMeasures();
-//        var greedyOptimizer = new GreedyOptimizer(model, state);
-//        var greedyResult = greedyOptimizer.optimize(state);
-//        greedyResult.setFitness(fitnessFunction.eval(greedyResult.getAllocation(), state.getCurrentSystemMeasures()));
 
         OptResult optResult = null;
+
+        var stopWatch = new StopWatch();
+        stopWatch.start();
 
         switch (config.getStrategy()) {
             case GA:
@@ -167,6 +168,9 @@ public class Planner {
                 break;
         }
 
+        stopWatch.stop();
+        optResult.setRuntimeInMilliseconds(stopWatch.getTotalTimeMillis());
+
         if (!validator.isAllocationValid(optResult.getAllocation(), previousAllocation, measures.getTotalServiceLoad())) {
             throw new IllegalStateException("Invalid allocation!");
         }
@@ -176,7 +180,6 @@ public class Planner {
         var neutralFitness = fitnessFunction.evalNeutral(optResult.getAllocation(), measures);
         optResult.setNeutralFitness(neutralFitness);
 
-//        greedyOptimizations.add(greedyResult);
         optimizations.add(optResult);
 
         return optResult;

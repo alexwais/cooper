@@ -11,7 +11,6 @@ import at.ac.tuwien.dsg.cooper.scheduler.dto.SystemMeasures;
 import ilog.cplex.IloCplex;
 import java.util.Map;
 import java.util.Set;
-import org.springframework.util.StopWatch;
 
 
 public class IlpOptimizer implements Optimizer {
@@ -35,14 +34,9 @@ public class IlpOptimizer implements Optimizer {
 //        params.setParam(IloCplex.DoubleParam.TimeLimit, 20);
 //        params.setParam(IloCplex.IntParam.RootAlgorithm, IloCplex.Algorithm.Primal);
 
-        var stopWatch = new StopWatch();
-        stopWatch.start();
-
         var allocationTuples = problem.solve(params);
 
-        stopWatch.stop();
-
-        return new OptResult(model, systemMeasures, allocationTuples, stopWatch.getTotalTimeMillis());
+        return new OptResult(model, systemMeasures, allocationTuples);
     }
 
 }

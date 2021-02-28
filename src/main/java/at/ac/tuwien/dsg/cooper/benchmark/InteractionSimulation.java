@@ -60,8 +60,6 @@ public class InteractionSimulation {
         var remainderSum = remainingOverflow.values().stream().mapToDouble(v -> v).sum();
         var diff = measures.getTotalSystemLoad() - totalProcessedSum;
 
-//        log.info("Processed external load: {} | Processed total load: {} | Diff: {} | Remaining overflow: {}", processedSum, totalProcessedSum, diff, remainingOverflow);
-
         if (remainderSum > 0.1) {
             throw new IllegalStateException("Remainder!");
         }
@@ -70,6 +68,9 @@ public class InteractionSimulation {
         }
     }
 
+    /**
+     * Distribute total external load proportionally among containers
+     */
     private Map<Allocation.AllocationTuple, Double> computeAssignedContainerLoad() {
         var assignedContainerLoad = new HashMap<Allocation.AllocationTuple, Double>();
         for (var serviceAndLoad : measures.getExternalServiceLoad().entrySet()) {

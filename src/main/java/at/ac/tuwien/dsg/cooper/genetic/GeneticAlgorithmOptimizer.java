@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.StopWatch;
 
 
 @Slf4j
@@ -55,9 +54,6 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
     }
 
     public OptResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {
-        var stopWatch = new StopWatch();
-        stopWatch.start();
-
         var codec = new AllocationCodec(model, systemMeasures);
 
         var repairingConstraint = new RepairingConstraint(model, systemMeasures, validator, codec, previousAllocation);
@@ -108,8 +104,7 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
 
         var decodedAllocationMapping = codec.decode(bestPhenotype.genotype());
 
-        stopWatch.stop();
-        return new OptResult(model, systemMeasures, decodedAllocationMapping, stopWatch.getTotalTimeMillis());
+        return new OptResult(model, systemMeasures, decodedAllocationMapping);
     }
 
 }

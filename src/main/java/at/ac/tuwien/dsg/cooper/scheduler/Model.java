@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.WeightedPseudograph;
-import org.springframework.util.StopWatch;
 
 @Getter
 public class Model {
@@ -75,16 +74,9 @@ public class Model {
 
 
         public OptResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> cachedImages) {
-            var stopWatch = new StopWatch();
-            stopWatch.start();
-
             var allocationTuples = doIt(previousAllocation, systemMeasures);
-
-            stopWatch.stop();
-
-            return new OptResult(model, systemMeasures, allocationTuples, stopWatch.getTotalTimeMillis());
+            return new OptResult(model, systemMeasures, allocationTuples);
         }
-
 
         public List<Allocation.AllocationTuple> doIt(Allocation previousAllocation, SystemMeasures systemMeasures) {
             var allocationMap = new Allocation(previousAllocation).getAllocationMap();

@@ -19,16 +19,14 @@ public class OptResult {
     private Long runtimeInMilliseconds;
 
 
-    public OptResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping, Long runtimeInMilliseconds) {
+    public OptResult(Model model, SystemMeasures underlyingMeasures, Map<VmInstance, List<ContainerType>> allocationMapping) {
         this.underlyingMeasures = underlyingMeasures;
         this.allocation = new Allocation(model, allocationMapping);
-        this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
-    public OptResult(Model model, SystemMeasures underlyingMeasures, List<Allocation.AllocationTuple> allocationTuples, Long runtimeInMilliseconds) {
+    public OptResult(Model model, SystemMeasures underlyingMeasures, List<Allocation.AllocationTuple> allocationTuples) {
         this.underlyingMeasures = underlyingMeasures;
         this.allocation = new Allocation(model, allocationTuples);
-        this.runtimeInMilliseconds = runtimeInMilliseconds;
     }
 
 }
