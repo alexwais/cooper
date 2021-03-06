@@ -3,11 +3,11 @@ package at.ac.tuwien.dsg.cooper.scheduler;
 import at.ac.tuwien.dsg.cooper.ConsoleTable;
 import at.ac.tuwien.dsg.cooper.api.CloudController;
 import at.ac.tuwien.dsg.cooper.api.MonitoringController;
-import at.ac.tuwien.dsg.cooper.benchmark.BenchmarkRecord;
-import at.ac.tuwien.dsg.cooper.benchmark.BenchmarkService;
 import at.ac.tuwien.dsg.cooper.config.OptimizationConfig;
 import at.ac.tuwien.dsg.cooper.csp.Cloud;
 import at.ac.tuwien.dsg.cooper.csp.Listener;
+import at.ac.tuwien.dsg.cooper.evaluation.EvaluationRecord;
+import at.ac.tuwien.dsg.cooper.evaluation.EvaluationService;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.ExecutionPlan;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
@@ -45,7 +45,7 @@ public class SchedulingCycle {
     private final State currentState;
 
     @Autowired
-    private BenchmarkService benchmarkService;
+    private EvaluationService evaluationService;
 
     private long currentClock = 0L; // seconds
     private Allocation drainedTargetAllocation;
@@ -95,7 +95,7 @@ public class SchedulingCycle {
                 cloudController.abort();
                 tearDown();
                 try {
-                    benchmarkService.saveToFile();
+                    evaluationService.saveToFile();
                 } catch (IOException e2) {
                     e2.printStackTrace();
                 }
@@ -120,7 +120,7 @@ public class SchedulingCycle {
             }
 
             printAllocationStatus();
-            benchmark(executionPlan);
+            evaluate(executionPlan);
         }
 
         @Override
@@ -139,8 +139,8 @@ public class SchedulingCycle {
         currentState.setCurrentAnalysisResult(analysisResult);
     }
 
-    private void benchmark(ExecutionPlan executionPlan) {
-        var record = new BenchmarkRecord(
+    private void evaluate(ExecutionPlan executionPlan) {
+        var record = new EvaluationRecord(
                 (int) currentClock,
                 currentState.getImageDownloads(),
                 currentState.getCurrentSystemMeasures(),
@@ -149,7 +149,7 @@ public class SchedulingCycle {
                 currentState.getLastOptResult(),
                 currentState.getCurrentTargetAllocation()
         );
-        benchmarkService.sample(record);
+        evaluationService.sample(record);
     }
 
     private void tearDown() {

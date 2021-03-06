@@ -31,13 +31,13 @@ public class IlpProblem {
     // Term weights
     private static final int W_C = 1;
     private static final double W_G = 0.2;
-    private static final double W_A = 0.001;
+    private static final double W_L = 0.001;
     private static final double W_Q = 0.000001;
     private static final double W_I = 0.0001;
 
+
     // Other constants
-    private static final double G = 0.0000000001; // with higher G sometimes g(k) is wrong?? TODO document
-    // 0.0000000001 works with ILP-NC  b@1x, a@1x, a@10x, a@100x
+    private static final double G = 0.0000000001; // 10^{-10} works with ILP-NC  b@1x, a@1x, a@10x, a@100x
     private static final int M = 1_000;
 
 
@@ -166,7 +166,7 @@ public class IlpProblem {
                 cplex.prod(objectiveTerm5, W_I)
         );
         if (config.getStrategy() == OptimizationConfig.OptimizationAlgorithm.ILP) {
-            objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, W_A));
+            objectiveFunction = cplex.sum(objectiveFunction, cplex.prod(objectiveTerm3, W_L));
         }
 
         cplex.addMinimize(objectiveFunction);

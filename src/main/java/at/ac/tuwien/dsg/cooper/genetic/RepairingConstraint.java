@@ -2,6 +2,7 @@ package at.ac.tuwien.dsg.cooper.genetic;
 
 import at.ac.tuwien.dsg.cooper.domain.ContainerType;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
+import at.ac.tuwien.dsg.cooper.scheduler.FirstFitOptimizer;
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
 import at.ac.tuwien.dsg.cooper.scheduler.Validator;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
@@ -27,11 +28,11 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
     private final AllocationCodec mapping;
     private final Allocation previousAllocation;
 
-    private static final double CONSIDER_PREV_ALLOCATION_PROBABILITY = 0.2;
     private static final double REPAIRING_PROBABILITY = 0.2;
+    private static final double CONSIDER_PREV_ALLOCATION_PROBABILITY = 0.2;
 
     private SimpleReparation simpleReparation;
-    private Model.FirstFitOptimizer firstFitOptimizer;
+    private FirstFitOptimizer firstFitOptimizer;
 
 
     public RepairingConstraint(final Model model, final SystemMeasures measures, final Validator validator, final AllocationCodec mapping, final Allocation previousAllocation) {
@@ -42,7 +43,7 @@ public final class RepairingConstraint implements Constraint<DistributedIntegerG
         this.previousAllocation = previousAllocation;
 
         this.simpleReparation = new SimpleReparation(model, measures, validator, previousAllocation);
-        this.firstFitOptimizer = new Model.FirstFitOptimizer(model);
+        this.firstFitOptimizer = new FirstFitOptimizer(model);
     }
 
 

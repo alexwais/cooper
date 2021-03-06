@@ -1,4 +1,4 @@
-package at.ac.tuwien.dsg.cooper.benchmark;
+package at.ac.tuwien.dsg.cooper.interaction;
 
 import java.util.HashMap;
 import java.util.Map;

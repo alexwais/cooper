@@ -7,10 +7,7 @@ import at.ac.tuwien.dsg.cooper.domain.VmInstance;
 import at.ac.tuwien.dsg.cooper.genetic.FitnessFunction;
 import at.ac.tuwien.dsg.cooper.genetic.GeneticAlgorithmOptimizer;
 import at.ac.tuwien.dsg.cooper.ilp.IlpOptimizer;
-import at.ac.tuwien.dsg.cooper.scheduler.MapUtils;
-import at.ac.tuwien.dsg.cooper.scheduler.Model;
-import at.ac.tuwien.dsg.cooper.scheduler.State;
-import at.ac.tuwien.dsg.cooper.scheduler.Validator;
+import at.ac.tuwien.dsg.cooper.scheduler.*;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.ExecutionPlan;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
@@ -41,7 +38,8 @@ public class Planner {
     private final List<OptResult> optimizations = new ArrayList<>();
 
 
-    private static final float DRIFT_TOLERANCE = 2.0f; // percentage
+    private static final float LOAD_DRIFT_TOLERANCE = 2.0f; // percentage
+    private static final float CAPACITY_DRIFT_TOLERANCE = 2.0f; // percentage
     private static final float FITNESS_DRIFT_TOLERANCE = 5.0f; // percentage
 
 
@@ -66,7 +64,7 @@ public class Planner {
         this.fitnessFunction = new FitnessFunction(model, validator, config.getGaLatencyWeight());
         this.geneticOptimizer = new GeneticAlgorithmOptimizer(model, config, validator);
         this.ilpOptimizer = new IlpOptimizer(model, config);
-        this.firstFitOptimizer = new Model.FirstFitOptimizer(model);
+        this.firstFitOptimizer = new FirstFitOptimizer(model);
     }
 
     private ReallocationPlan currentReallocation = null;
@@ -107,13 +105,14 @@ public class Planner {
     private boolean isOptimizationRequired(State state) {
         var isLoadDriftExceeded = state.getCurrentAnalysisResult().getLoadDriftByService().entrySet().stream()
                 .anyMatch(e -> {
-                    var isExceeding = Math.abs(e.getValue()) > DRIFT_TOLERANCE;
+                    var isExceeding = Math.abs(e.getValue()) > LOAD_DRIFT_TOLERANCE;
                     if (isExceeding) log.debug("Load of {} changed significantly: {}%", e.getKey(), e.getValue());
                     return isExceeding;
                 });
+        // Capacity drift is actually not possible in our setup (only if resources change du to extrinsic factors, e.g. crashed VMs...)
         var isCapacityDriftExceeded = state.getCurrentAnalysisResult().getCapacityDriftByService().entrySet().stream()
                 .anyMatch(e -> {
-                    var isExceeding = Math.abs(e.getValue()) > DRIFT_TOLERANCE;
+                    var isExceeding = Math.abs(e.getValue()) > CAPACITY_DRIFT_TOLERANCE;
                     if (isExceeding) log.debug("Capacity of {} changed significantly: {}%", e.getKey(), e.getValue());
                     return isExceeding;
                 });

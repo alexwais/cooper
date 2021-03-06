@@ -1,8 +1,8 @@
 package at.ac.tuwien.dsg.cooper.genetic;
 
-import at.ac.tuwien.dsg.cooper.benchmark.InteractionSimulation;
 import at.ac.tuwien.dsg.cooper.domain.Service;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
+import at.ac.tuwien.dsg.cooper.interaction.InteractionSimulation;
 import at.ac.tuwien.dsg.cooper.scheduler.Model;
 import at.ac.tuwien.dsg.cooper.scheduler.Validator;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;

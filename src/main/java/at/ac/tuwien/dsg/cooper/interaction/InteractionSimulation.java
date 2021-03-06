@@ -1,4 +1,4 @@
-package at.ac.tuwien.dsg.cooper.benchmark;
+package at.ac.tuwien.dsg.cooper.interaction;
 
 import at.ac.tuwien.dsg.cooper.domain.DataCenter;
 import at.ac.tuwien.dsg.cooper.domain.VmInstance;
@@ -24,6 +24,7 @@ public class InteractionSimulation {
 
 
     public void simulate() {
+        // Initially, assign load pro-rata to each container.
         var assignedContainerLoad = computeAssignedContainerLoad();
 
         var dataCenterNodes = new HashMap<AggregatingInteractionNode, DataCenter>();
@@ -47,6 +48,7 @@ public class InteractionSimulation {
             }
         }
 
+        // Run simulation
         var rootNode = new AggregatingInteractionNode("root", model, new ArrayList<>(dataCenterNodes.keySet()), distanceGraph, interactionRecorder);
         var result = rootNode.initialize();
 

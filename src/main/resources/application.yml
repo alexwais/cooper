@@ -16,7 +16,7 @@ cooper:
   scenario-multiplicator: undefined
   load-multiplicator: ${multiplicator}
   loadFixture: load-fixture/${cooper.scenario}@${cooper.load-multiplicator}x.csv
-  benchmarkOutput: ${cooper.scenario}@${cooper.load-multiplicator}x_${cooper.optimization.strategy}.csv
+  evaluationOutput: ${cooper.scenario}@${cooper.load-multiplicator}x_${cooper.optimization.strategy}.csv
   optimization:
     strategy: ${strategy}
     gaLatencyWeight: undefined

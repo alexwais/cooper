@@ -1,4 +1,4 @@
-package at.ac.tuwien.dsg.cooper.benchmark;
+package at.ac.tuwien.dsg.cooper.evaluation;
 
 
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
@@ -15,7 +15,7 @@ import lombok.Setter;
 
 @RequiredArgsConstructor
 @JsonPropertyOrder({"t", "cost", "accCost", "accLatency", "latency", "interactionCalls", "opt", "imageDownloads", "fitness", "neutralFitness",  "vmCount",  "peakContainerCount", "runtime"})
-public class BenchmarkRecord {
+public class EvaluationRecord {
 
     @Getter
     @JsonIgnore
@@ -70,13 +70,13 @@ public class BenchmarkRecord {
 
     public Float getAccLatency() {
         var totalLatency = records.stream().map(r -> r.getLatency() * r.getInteractionCalls()).reduce(Double::sum).get().floatValue();
-        var totalCalls = records.stream().map(BenchmarkRecord::getInteractionCalls).reduce(Integer::sum).get();
+        var totalCalls = records.stream().map(EvaluationRecord::getInteractionCalls).reduce(Integer::sum).get();
         return totalLatency / totalCalls;
     }
 
     @JsonIgnore
     @Setter
-    private List<BenchmarkRecord> records;
+    private List<EvaluationRecord> records;
 
     @Getter
     @JsonIgnore

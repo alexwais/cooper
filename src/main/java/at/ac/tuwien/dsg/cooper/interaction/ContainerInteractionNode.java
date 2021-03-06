@@ -1,4 +1,4 @@
-package at.ac.tuwien.dsg.cooper.benchmark;
+package at.ac.tuwien.dsg.cooper.interaction;
 
 import at.ac.tuwien.dsg.cooper.domain.ContainerType;
 import at.ac.tuwien.dsg.cooper.domain.Service;
