@@ -2,7 +2,7 @@
 
 Co-location ptimized elastic runner for microservices
 
-This repository contains the reference implementation/prototype of the CaaS middleware developed in the course of the corresponding master thesis at TU Wien.
+Reference implementation/prototype of the CaaS middleware developed in the course of the corresponding master thesis at TU Wien / Distributed Systems Group.
 
 
 ### Prerequisites
