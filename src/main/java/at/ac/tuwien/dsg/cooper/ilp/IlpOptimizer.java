@@ -28,7 +28,7 @@ public class IlpOptimizer implements Optimizer {
         var problem = new IlpProblem(model, currentAllocation, systemMeasures, cachedImages, config);
 
         var params = new IloCplex.ParameterSet();
-        // TODO https://www.ibm.com/support/pages/node/397111 + reference?
+        // https://www.ibm.com/support/pages/node/397111
 //        params.setParam(IloCplex.IntParam.Emphasis.MIP, 3);
 //        params.setParam(IloCplex.DoubleParam.MIP.Tolerances.MIPGap, 0.0025);
 //        params.setParam(IloCplex.DoubleParam.TimeLimit, 20);

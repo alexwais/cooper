@@ -51,12 +51,10 @@ $ java -jar \
 
 * `-Djava.library.path`: Set this to the binary path of your CPLEX installation (sample for macOS). Required for CPLEX to work at runtime.
 * `-Dscenario`: The scenario configuration to use.
-* `-Dstrategy`: The optimization strategy applied. Availavble values: `ILP-C` | `ILP-NC` | `GA`
+* `-Dstrategy`: The optimization strategy applied. Available values: `ILP` | `ILP-NC` | `GA` | `GA-NC` | `FF`
 * `-Dmultiplicator`: An integer multiplication factor for load fixture. `1` | `10` | `100`
 
 
 ### License
 
 Apache License Version 2.0
-
-Copyright (C) Alexander Wais

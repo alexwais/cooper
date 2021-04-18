@@ -10,7 +10,7 @@ public class InstanceTypeConfig {
 
     private Integer cpuCores;
 
-    private DataSize memory; // MB
+    private DataSize memory;
 
     private Float cost = 0f; // USD; 0 in case of on-premise instances
 

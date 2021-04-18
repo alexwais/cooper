@@ -26,7 +26,7 @@ public class EvaluationService {
     private Map<Integer, EvaluationRecord> records = new HashMap<>();
 
     @Autowired
-    public EvaluationService(Model model, @Value("${cooper.evaluationOutput}") String outputFileName) {
+    public EvaluationService(Model model, @Value("${cooper.evaluation-output}") String outputFileName) {
         this.model = model;
         this.outputFileName = outputFileName;
     }
@@ -38,7 +38,6 @@ public class EvaluationService {
 
     public void sample(EvaluationRecord record) {
         var seconds = record.getSeconds();
-        var minute = seconds / 60;
         var isEvenMinute = seconds % 120 == 0;
         var isOddMinute = (seconds + 60) % 120 == 0;
 
@@ -76,7 +75,7 @@ public class EvaluationService {
         ObjectWriter myObjectWriter = mapper.writer(schema);
 
         var timestamp = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss").format(LocalDateTime.now());
-        var filePath = "evaluation/" + outputFileName.replace(".csv", "_" + timestamp + ".csv");
+        var filePath = outputFileName.replace(".csv", "_" + timestamp + ".csv");
         var file = new File(filePath);
         FileOutputStream tempFileOutputStream = new FileOutputStream(file);
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(tempFileOutputStream, 1024);

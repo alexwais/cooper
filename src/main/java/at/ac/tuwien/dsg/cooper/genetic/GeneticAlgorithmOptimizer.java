@@ -25,32 +25,15 @@ public class GeneticAlgorithmOptimizer implements Optimizer {
 
     private final Model model;
     private final OptimizationConfig config;
-    //    private final State state;
-//    private final Mapping mapping;
     private final Validator validator;
     private final FitnessFunction fitnessFunctionInstance;
-
-//     private final RetryConstraint<DistributedIntegerGene, Float> constraint;
-//    private final Codec<Map<VmInstance, List<ContainerType>>, DistributedIntegerGene> serviceRowCodec;
-
 
     public GeneticAlgorithmOptimizer(Model model, OptimizationConfig config, Validator validator) {
         this.model = model;
         this.config = config;
 
-//        this.mapping = new Mapping(model, state);
-//        this.initialPopulation = initialPopulation.stream()
-//                .map(mapping::optimizationResultToGenotype)
-//                .collect(Collectors.toList());
-
         this.validator = validator;
         this.fitnessFunctionInstance = new FitnessFunction(model, validator, config.getGaLatencyWeight());
-
-//        flatCodec = Codec.of(mapping.flatGenotypeFactory(), mapping::flatDecoder);
-//        containerRowCodec = Codec.of(mapping.containerRowGenotypeFactory(), mapping::containerRowSquareDecoder);
-//        vmRowCodec = Codec.of(mapping.vmRowGenotypeFactory(), mapping::vmRowSquareDecoder);
-
-
     }
 
     public OptResult optimize(Allocation previousAllocation, SystemMeasures systemMeasures, Map<VmInstance, Set<Service>> imageCacheState) {

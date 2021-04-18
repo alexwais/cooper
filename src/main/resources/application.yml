@@ -13,13 +13,12 @@ multiplicator: 1
 
 cooper:
   scenario: scenario-${scenario}
-  scenario-multiplicator: undefined
-  load-multiplicator: ${multiplicator}
-  loadFixture: load-fixture/${cooper.scenario}@${cooper.load-multiplicator}x.csv
-  evaluationOutput: ${cooper.scenario}@${cooper.load-multiplicator}x_${cooper.optimization.strategy}.csv
+  loadMultiplicator: ${multiplicator}
+  scenarioMultiplicator: undefined # defined in scenario Yaml files
+  loadFixture: load-fixture/${cooper.scenario}@${cooper.loadMultiplicator}x.csv
+  evaluationOutput: evaluation/${cooper.scenario}@${cooper.loadMultiplicator}x_${cooper.optimization.strategy}.csv
   optimization:
     strategy: ${strategy}
-    gaLatencyWeight: undefined
+    gaLatencyWeight: undefined # defined in scenario Yaml files
 
-#spring.config.import: ${cooper.scenario}.yml
-spring.config.import: ${cooper.scenario}@${cooper.load-multiplicator}x.yml
+spring.config.import: ${cooper.scenario}@${cooper.loadMultiplicator}x.yml

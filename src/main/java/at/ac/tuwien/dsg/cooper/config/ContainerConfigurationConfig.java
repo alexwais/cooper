@@ -10,7 +10,7 @@ public class ContainerConfigurationConfig {
 
     private Integer cpuUnits;
 
-    private DataSize memory; // MB
+    private DataSize memory;
 
     private Long rpmCapacity;
 

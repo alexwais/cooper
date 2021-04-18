@@ -19,7 +19,6 @@ public class FitnessFunction {
     private final Model model;
     private final Validator validator;
 
-    // TODO finalize doc
     private static final float W_COST = 1;
     private static final float W_GRACE_PERIOD_WASTE = 0.4f;
     private final float wLatency;

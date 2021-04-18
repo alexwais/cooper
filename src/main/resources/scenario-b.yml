@@ -1,5 +1,5 @@
 cooper:
-  scenario-multiplicator: 15
+  scenarioMultiplicator: 15
 
 dataCenters:
   DC-Private:

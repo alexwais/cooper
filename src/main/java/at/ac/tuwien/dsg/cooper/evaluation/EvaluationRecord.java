@@ -2,7 +2,6 @@ package at.ac.tuwien.dsg.cooper.evaluation;
 
 
 import at.ac.tuwien.dsg.cooper.scheduler.dto.Allocation;
-import at.ac.tuwien.dsg.cooper.scheduler.dto.AnalysisResult;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.OptResult;
 import at.ac.tuwien.dsg.cooper.scheduler.dto.SystemMeasures;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -81,8 +80,6 @@ public class EvaluationRecord {
     @Getter
     @JsonIgnore
     private final SystemMeasures measures;
-
-    private final AnalysisResult analysisResult;
 
     @Getter
     @JsonIgnore
